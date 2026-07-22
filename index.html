@@ -1,0 +1,2947 @@
+<meta charset="utf-8">
+<title>GoPandaCN — Smart Offline China Travel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="assets/mascot-64.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#020617">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
+<style>
+  :root{
+    --bg:#020617;          /* slate-950 */
+    --panel:#0f172a;       /* slate-900 */
+    --panel-2:#111c33;
+    --border:#1e293b;      /* slate-800 */
+    --border-soft:#16213a;
+    --text:#e2e8f0;        /* slate-200 */
+    --muted:#94a3b8;       /* slate-400 */
+    --faint:#64748b;       /* slate-500 */
+    --gold:#f59e0b;        /* amber-500 */
+    --gold-2:#fbbf24;      /* amber-400 */
+    --gold-soft:rgba(245,158,11,.12);
+    --emerald:#10b981;
+    --cyan:#22d3ee;
+    --active-grad:linear-gradient(135deg,rgba(16,185,129,.18),rgba(34,211,238,.14));
+    --glass:rgba(15,23,42,.72);
+    --radius:16px;
+    --sidebar-w:300px;
+    --dock-w:340px;
+    --dock-rail:48px;
+    font-family:'Leelawadee UI','Noto Sans Thai','Sarabun','Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    background-image:
+      radial-gradient(1100px 500px at 85% -10%, rgba(245,158,11,.07), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(34,211,238,.06), transparent 60%);
+    min-height:100dvh;overflow:hidden;
+  }
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  input{font-family:inherit}
+  :focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#1e293b;border-radius:8px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ===== App shell ===== */
+  .app{
+    display:grid;height:100dvh;
+    grid-template-columns:var(--sidebar-w) 1fr var(--dock-w);
+    transition:grid-template-columns .35s cubic-bezier(.4,0,.2,1);
+  }
+  .app.dock-collapsed{grid-template-columns:var(--sidebar-w) 1fr var(--dock-rail)}
+
+  .label{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ===== Left sidebar ===== */
+  .sidebar{
+    background:linear-gradient(180deg,var(--panel) 0%,#0b1426 100%);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;gap:20px;
+    padding:22px 18px;overflow-y:auto;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-badge{
+    width:44px;height:44px;border-radius:14px;flex:none;
+    display:grid;place-items:center;font-size:24px;overflow:hidden;
+    background:linear-gradient(135deg,#1e293b,#0f172a);
+    border:1px solid rgba(245,158,11,.45);
+    box-shadow:0 0 22px rgba(245,158,11,.18), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .brand-badge img{width:100%;height:100%;object-fit:cover}
+  .brand h1{margin:0;font-size:1.12rem;letter-spacing:.02em}
+  .brand h1 span{color:var(--gold-2)}
+  .brand p{margin:2px 0 0;font-size:.72rem;color:var(--muted)}
+
+  .trip-card{
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:linear-gradient(160deg,#131f38 0%,#0d1730 100%);
+    padding:16px;position:relative;overflow:hidden;
+    /* flex:none จำเป็น — overflow:hidden ทำให้ min-height เป็น 0 ใน flex column ของ .sidebar
+       พอเนื้อหา drawer สูงเกินจอมือถือ การ์ดนี้จะโดนบีบแบนคนเดียว (ลูกตัวอื่น overflow ปกติจึงไม่ยุบ)
+       ต้องกันไว้ให้ sidebar เลื่อน (overflow-y:auto) แทนการยุบการ์ด */
+    flex:none;
+  }
+  .trip-card::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(320px 140px at 100% 0%, rgba(245,158,11,.14), transparent 70%);
+  }
+  .trip-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .trip-city{margin:6px 0 2px;font-size:1.25rem;font-weight:700}
+  .trip-city small{display:block;font-size:.72rem;font-weight:500;color:var(--muted);margin-top:2px}
+  .countdown{
+    flex:none;font-size:.7rem;font-weight:700;color:#0b0f00;
+    background:linear-gradient(135deg,var(--gold),var(--gold-2));
+    padding:5px 10px;border-radius:999px;box-shadow:0 4px 14px rgba(245,158,11,.35);
+  }
+  .trip-meta{display:flex;gap:14px;margin-top:12px;font-size:.78rem;color:var(--muted)}
+  .trip-meta b{display:block;color:var(--text);font-size:.92rem;font-weight:600}
+  .ready{margin-top:16px;cursor:pointer;border-radius:12px;padding:6px;margin-left:-6px;margin-right:-6px;transition:background .2s}
+  .ready:hover{background:rgba(245,158,11,.07)}
+  .ready-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .ready-row strong{color:var(--gold-2);font-size:1rem}
+  .ready-bar{height:8px;border-radius:99px;background:#0a1122;border:1px solid var(--border-soft);overflow:hidden}
+  .ready-fill{
+    height:100%;width:78%;border-radius:99px;
+    background:linear-gradient(90deg,var(--gold) 0%,var(--gold-2) 60%,#fde68a 100%);
+    box-shadow:0 0 12px rgba(245,158,11,.5);
+  }
+  .ready-hint{margin-top:8px;font-size:.72rem;color:var(--faint)}
+
+  .nav{display:flex;flex-direction:column;gap:6px}
+  .nav-btn{
+    display:flex;align-items:center;gap:12px;text-align:left;
+    padding:12px 14px;border-radius:14px;border:1px solid transparent;
+    color:var(--muted);font-size:.92rem;font-weight:500;
+    transition:background .2s,color .2s,border-color .2s;
+  }
+  .nav-btn .ic{width:22px;flex:none;text-align:center;font-size:1.05rem;filter:grayscale(.4);opacity:.85}
+  .nav-btn:hover{background:rgba(148,163,184,.07);color:var(--text)}
+  .nav-btn.active{
+    background:var(--active-grad);
+    border-color:rgba(16,185,129,.35);
+    color:#d1fae5;font-weight:600;
+  }
+  .nav-btn.active .ic{filter:none;opacity:1}
+  .nav-btn.active::after{
+    content:"";margin-left:auto;width:6px;height:6px;border-radius:99px;
+    background:var(--cyan);box-shadow:0 0 8px var(--cyan);
+  }
+
+  .offline-pill{
+    margin-top:auto;display:flex;align-items:center;gap:10px;
+    border:1px solid rgba(16,185,129,.3);border-radius:14px;
+    background:rgba(16,185,129,.07);padding:11px 13px;font-size:.76rem;color:#a7f3d0;
+  }
+  .offline-dot{width:8px;height:8px;border-radius:99px;background:var(--emerald);box-shadow:0 0 8px var(--emerald);flex:none}
+
+  /* ===== Center workspace ===== */
+  .center{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+  .topbar{
+    display:flex;align-items:center;gap:12px;
+    padding:14px 22px;border-bottom:1px solid var(--border);
+    background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  }
+  .topbar h2{margin:0;font-size:1.02rem;font-weight:600}
+  .topbar .sub{font-size:.75rem;color:var(--muted)}
+  .icon-btn{
+    width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+    border:1px solid var(--border);background:rgba(30,41,59,.5);font-size:1.05rem;flex:none;
+    transition:border-color .2s,background .2s;
+  }
+  .icon-btn:hover{border-color:var(--gold);background:var(--gold-soft)}
+  .hamburger{display:none}
+  .status-chip{
+    margin-left:auto;display:flex;align-items:center;gap:8px;
+    font-size:.74rem;color:#a7f3d0;border:1px solid rgba(16,185,129,.3);
+    background:rgba(16,185,129,.08);padding:6px 12px;border-radius:999px;white-space:nowrap;
+  }
+
+  .views{flex:1;min-height:0;position:relative}
+  .view{position:absolute;inset:0;display:none;flex-direction:column;overflow-y:auto;padding:22px}
+  .view.active{display:flex;animation:fadeUp .3s ease}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+
+  /* ---- Map view ---- */
+  .view-map{padding:22px;gap:14px}
+  .map-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .city-chip,.cat-chip{
+    padding:8px 16px;border-radius:999px;border:1px solid var(--border);
+    background:rgba(30,41,59,.45);font-size:.82rem;color:var(--muted);font-weight:500;
+    transition:all .2s;
+  }
+  .city-chip:hover,.cat-chip:hover{color:var(--text);border-color:var(--faint)}
+  .city-chip.active,.cat-chip.active{
+    color:#062c22;background:linear-gradient(135deg,var(--emerald),var(--cyan));
+    border-color:transparent;font-weight:700;box-shadow:0 4px 14px rgba(34,211,238,.3);
+  }
+  .map-search{
+    margin-left:auto;display:flex;align-items:center;gap:8px;
+    border:1px solid var(--border);border-radius:12px;background:rgba(15,23,42,.6);
+    padding:8px 12px;min-width:200px;
+  }
+  .map-search input{background:none;border:none;color:var(--text);font-size:.85rem;width:100%;outline:none}
+  .map-search input::placeholder{color:var(--faint)}
+
+  .map-frame{
+    position:relative;flex:1;min-height:380px;border-radius:var(--radius);
+    border:1px solid var(--border);overflow:hidden;background:#0a1324;
+  }
+  .map-frame svg{position:absolute;inset:0;width:100%;height:100%}
+  #mapCanvas{position:absolute;inset:0;width:100%;height:100%}
+  .gp-pin{width:26px;height:26px;cursor:pointer;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+  .gp-pin svg{width:100%;height:100%}
+  .gp-pin.selected{filter:drop-shadow(0 2px 5px rgba(245,158,11,.6)) drop-shadow(0 0 0 2px #f59e0b)}
+  .gp-user-dot{width:16px;height:16px;border-radius:50%;background:#22d3ee;border:2px solid #083344;
+    box-shadow:0 0 0 6px rgba(34,211,238,.18)}
+  .map-pin{cursor:pointer}
+  .map-pin circle.halo{opacity:0;transition:opacity .2s}
+  .map-pin:hover circle.halo,.map-pin.selected circle.halo{opacity:1}
+  .map-badge{
+    position:absolute;left:14px;top:14px;display:flex;align-items:center;gap:8px;
+    background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(16,185,129,.35);border-radius:999px;
+    padding:7px 14px;font-size:.74rem;color:#a7f3d0;
+  }
+  .zoom-ctl{
+    position:absolute;right:14px;top:14px;display:flex;flex-direction:column;
+    border:1px solid var(--border);border-radius:12px;overflow:hidden;
+    background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  }
+  .zoom-ctl button{width:38px;height:38px;font-size:1.1rem;color:var(--muted)}
+  .zoom-ctl button:first-child{border-bottom:1px solid var(--border)}
+  .zoom-ctl button:hover{color:var(--gold-2);background:var(--gold-soft)}
+  .pin-pop{
+    position:absolute;left:14px;bottom:14px;right:14px;max-width:360px;
+    background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;display:none;gap:4px;flex-direction:column;
+    box-shadow:0 18px 40px rgba(0,0,0,.45);
+  }
+  .pin-pop.show{display:flex;animation:fadeUp .25s ease}
+  .pin-pop h4{margin:0;font-size:.98rem}
+  .pin-pop h4 span{color:var(--gold-2);margin-right:6px}
+  .pin-pop p{margin:0;font-size:.78rem;color:var(--muted);line-height:1.5}
+  .pin-pop .row{display:flex;gap:8px;margin-top:10px}
+  .btn-gold{
+    padding:8px 14px;border-radius:10px;font-size:.78rem;font-weight:700;color:#1c1400;
+    background:linear-gradient(135deg,var(--gold),var(--gold-2));
+    box-shadow:0 4px 12px rgba(245,158,11,.3);
+  }
+  .btn-ghost{
+    padding:8px 14px;border-radius:10px;font-size:.78rem;font-weight:600;
+    border:1px solid var(--border);color:var(--muted);
+  }
+  .btn-ghost:hover{color:var(--text);border-color:var(--faint)}
+
+  /* ---- Itinerary view ---- */
+  .day-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;flex:none}
+  .day-chip{
+    flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;
+    min-width:64px;padding:9px 12px;border-radius:14px;
+    border:1px solid var(--border);background:rgba(30,41,59,.4);
+    color:var(--muted);font-size:.72rem;transition:all .2s;
+  }
+  .day-chip b{font-size:.95rem;color:var(--text)}
+  .day-chip.active{
+    border-color:rgba(34,211,238,.5);background:var(--active-grad);color:#a5f3fc;
+  }
+  .day-chip.active b{color:#cffafe}
+  .itin-head{display:flex;align-items:baseline;justify-content:space-between;margin:16px 2px 12px;flex-wrap:wrap;gap:6px}
+  .itin-head h3{margin:0;font-size:1.05rem}
+  .itin-head h3 em{font-style:normal;color:var(--gold-2)}
+  .timeline{display:flex;flex-direction:column;gap:0;position:relative;padding-left:24px}
+  .timeline::before{
+    content:"";position:absolute;left:7px;top:14px;bottom:14px;width:2px;
+    background:linear-gradient(180deg,var(--gold) 0%,rgba(245,158,11,.15) 100%);
+  }
+  .stop{position:relative;padding:0 0 18px 12px}
+  .stop::before{
+    content:"";position:absolute;left:-24px;top:14px;width:12px;height:12px;border-radius:99px;
+    background:var(--bg);border:3px solid var(--gold);box-shadow:0 0 10px rgba(245,158,11,.45);
+  }
+  .stop-card{
+    border:1px solid var(--border);border-radius:14px;background:var(--panel);
+    padding:13px 15px;display:flex;gap:12px;align-items:flex-start;
+    transition:border-color .2s,transform .2s;
+  }
+  .stop-card:hover{border-color:rgba(245,158,11,.4);transform:translateX(3px)}
+  .stop-time{flex:none;font-weight:700;color:var(--gold-2);font-size:.85rem;min-width:48px}
+  .stop-body h4{margin:0 0 3px;font-size:.93rem}
+  .stop-body p{margin:0;font-size:.77rem;color:var(--muted);line-height:1.55}
+  .tag{
+    display:inline-block;margin-top:8px;margin-right:6px;
+    font-size:.66rem;font-weight:600;padding:3px 9px;border-radius:99px;
+  }
+  .tag.food{color:#fcd34d;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3)}
+  .tag.spot{color:#a5f3fc;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3)}
+  .tag.move{color:#c4b5fd;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3)}
+  .add-stop{
+    margin-left:12px;border:1px dashed var(--border);border-radius:14px;
+    padding:13px;text-align:center;color:var(--faint);font-size:.82rem;width:calc(100% - 12px);
+    transition:all .2s;
+  }
+  .add-stop:hover{border-color:var(--gold);color:var(--gold-2);background:var(--gold-soft)}
+
+  /* ---- Journal view ---- */
+  .sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;flex:none}
+  .sum-card{
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:var(--panel);padding:15px 16px;
+  }
+  .sum-card .label{margin-bottom:6px;display:block}
+  .sum-card b{font-size:1.3rem;font-weight:700}
+  .sum-card small{display:block;margin-top:3px;font-size:.72rem;color:var(--muted)}
+  .sum-card.gold b{color:var(--gold-2)}
+  .sum-card.green b{color:#6ee7b7}
+  .spend-bar{display:flex;height:10px;border-radius:99px;overflow:hidden;margin:18px 2px 8px;border:1px solid var(--border-soft)}
+  .spend-bar i{display:block;height:100%}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.72rem;color:var(--muted);margin-bottom:16px}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .exp-list{display:flex;flex-direction:column;gap:8px}
+  .exp{
+    display:flex;align-items:center;gap:13px;border:1px solid var(--border);
+    border-radius:14px;background:var(--panel);padding:12px 14px;
+  }
+  .exp-ic{
+    width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+    font-size:1.05rem;flex:none;background:rgba(30,41,59,.6);border:1px solid var(--border);
+  }
+  .exp-body{min-width:0;flex:1}
+  .exp-body h5{margin:0;font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .exp-body span{font-size:.72rem;color:var(--faint)}
+  .exp-amt{text-align:right;flex:none}
+  .exp-amt b{display:block;font-size:.92rem;color:var(--gold-2)}
+  .exp-amt span{font-size:.7rem;color:var(--faint)}
+
+  /* ===== Right dock ===== */
+  .dock{
+    border-left:1px solid var(--border);
+    background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    display:flex;flex-direction:column;min-width:0;overflow:hidden;
+  }
+  .dock-head{
+    display:flex;align-items:center;gap:10px;padding:14px 16px;
+    border-bottom:1px solid var(--border);flex:none;
+  }
+  .dock-head h3{margin:0;font-size:.9rem;font-weight:600;white-space:nowrap}
+  .dock-collapse{margin-left:auto}
+  .dock-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .dock-rail{display:none;flex-direction:column;align-items:center;gap:14px;padding:14px 0}
+  @media (min-width:1024px){
+    .app.dock-collapsed .dock-body,.app.dock-collapsed .dock-head h3{display:none}
+    .app.dock-collapsed .dock-rail{display:flex}
+    .app.dock-collapsed .dock-head{justify-content:center;padding:14px 4px}
+  }
+  .rail-btn{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:1rem;border:1px solid var(--border);background:rgba(30,41,59,.5)}
+  .rail-btn:hover{border-color:var(--gold)}
+
+  /* chat */
+  .chat{flex:1.25;display:flex;flex-direction:column;min-height:0;border-bottom:1px solid var(--border)}
+  .chat-title{display:flex;align-items:center;gap:9px;padding:13px 16px 8px;flex:none}
+  .chat-title .ava{
+    width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-size:15px;overflow:hidden;
+    background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(245,158,11,.08));
+    border:1px solid rgba(245,158,11,.4);
+  }
+  .chat-title .ava img{width:100%;height:100%;object-fit:cover}
+  .chat-title b{font-size:.85rem}
+  .chat-title span{font-size:.68rem;color:var(--emerald)}
+  .chat-msgs{flex:1;overflow-y:auto;padding:6px 16px;display:flex;flex-direction:column;gap:9px}
+  .msg{max-width:88%;padding:9px 13px;border-radius:14px;font-size:.8rem;line-height:1.55}
+  .msg.ai{
+    align-self:flex-start;background:rgba(30,41,59,.65);
+    border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--text);
+  }
+  .msg.me{
+    align-self:flex-end;color:#083344;font-weight:500;
+    background:linear-gradient(135deg,#67e8f9,#6ee7b7);
+    border-bottom-right-radius:4px;
+  }
+  .chips{display:flex;gap:6px;flex-wrap:wrap;padding:4px 16px 10px;flex:none}
+  .chips button{
+    font-size:.7rem;color:var(--muted);border:1px solid var(--border);
+    border-radius:999px;padding:5px 11px;transition:all .2s;
+  }
+  .chips button:hover{color:var(--gold-2);border-color:var(--gold)}
+  .chat-input{display:flex;gap:8px;padding:10px 16px 14px;flex:none}
+  .chat-input input{
+    flex:1;background:rgba(15,23,42,.8);border:1px solid var(--border);
+    border-radius:12px;color:var(--text);padding:10px 13px;font-size:.82rem;outline:none;min-width:0;
+  }
+  .chat-input input:focus{border-color:rgba(34,211,238,.5)}
+  .send-btn{
+    width:40px;height:40px;flex:none;border-radius:12px;font-size:1rem;
+    background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1c1400;
+    box-shadow:0 4px 12px rgba(245,158,11,.3);
+  }
+
+  /* currency */
+  .fx{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:13px 16px 16px}
+  .fx-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+  .fx-head b{font-size:.85rem}
+  .fx-head span{font-size:.68rem;color:var(--faint)}
+  .fx-row{display:grid;grid-template-columns:1fr 36px 1fr;gap:8px;align-items:center}
+  .fx-field{border:1px solid var(--border);border-radius:12px;background:rgba(15,23,42,.8);padding:8px 12px}
+  .fx-field label{display:block;font-size:.64rem;letter-spacing:.1em;color:var(--faint);font-weight:700}
+  .fx-field input{
+    width:100%;background:none;border:none;outline:none;color:var(--gold-2);
+    font-size:1.05rem;font-weight:700;padding:2px 0 0;
+  }
+  .fx-swap{
+    width:36px;height:36px;border-radius:99px;display:grid;place-items:center;
+    border:1px solid var(--border);color:var(--cyan);font-size:.95rem;justify-self:center;
+  }
+  .fx-swap:hover{border-color:var(--cyan);box-shadow:0 0 10px rgba(34,211,238,.25)}
+  .fx-rate{margin:9px 2px 12px;font-size:.7rem;color:var(--muted)}
+  .fx-rate b{color:#6ee7b7}
+  .preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .preset{
+    border:1px solid var(--border);border-radius:12px;background:rgba(30,41,59,.4);
+    padding:9px 6px;text-align:center;transition:all .2s;
+  }
+  .preset b{display:block;font-size:.88rem;color:var(--text)}
+  .preset span{font-size:.66rem;color:var(--gold-2)}
+  .preset:hover{border-color:var(--gold);background:var(--gold-soft);transform:translateY(-2px)}
+
+  /* ---- City packs view ---- */
+  #view-packs,#view-phrases{gap:14px}
+  .store-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);padding:16px;flex:none}
+  .store-row{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px}
+  .store-row b{font-size:1.2rem;color:var(--gold-2);margin-left:6px}
+  .store-row small{color:var(--faint);font-size:.74rem}
+  .store-free{font-size:.74rem;color:var(--muted)}
+  .store-meter{height:9px;border-radius:99px;background:#0a1122;border:1px solid var(--border-soft);overflow:hidden;margin-top:10px}
+  .store-meter i{display:block;height:100%;background:linear-gradient(90deg,var(--emerald),var(--cyan));border-radius:99px;transition:width .4s}
+  .pack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .pack{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);padding:15px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
+  .pack:hover{border-color:rgba(245,158,11,.35)}
+  .pack-top{display:flex;align-items:center;gap:11px}
+  .pack-flag{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:1.25rem;background:rgba(30,41,59,.6);border:1px solid var(--border);flex:none}
+  .pack-top h4{margin:0;font-size:.95rem}
+  .pack-top h4 small{display:block;font-size:.7rem;color:var(--faint);font-weight:500;margin-top:1px}
+  .pk-badge{margin-left:auto;flex:none;font-size:.64rem;font-weight:700;padding:4px 9px;border-radius:99px}
+  .pk-badge.ok{color:#6ee7b7;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35)}
+  .pk-badge.update{color:#fcd34d;background:var(--gold-soft);border:1px solid rgba(245,158,11,.4)}
+  .pk-badge.none{color:var(--faint);background:rgba(148,163,184,.06);border:1px solid var(--border)}
+  .pack-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .pack-chips span{font-size:.64rem;color:var(--muted);border:1px solid var(--border-soft);background:rgba(30,41,59,.35);padding:3px 8px;border-radius:99px}
+  .pack-foot{display:flex;align-items:center;gap:8px;margin-top:auto;min-height:34px}
+  .pack-size{font-size:.72rem;color:var(--faint)}
+  .pack-foot .btn-gold,.pack-foot .btn-ghost{margin-left:auto}
+  .pack-bar{height:7px;border-radius:99px;background:#0a1122;border:1px solid var(--border-soft);overflow:hidden;flex:1}
+  .pack-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-2));transition:width .25s}
+  .pack .pct{font-size:.7rem;color:var(--gold-2);min-width:38px;text-align:right}
+
+  /* ---- Phrases view ---- */
+  .sos-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:none}
+  .sos{border:1px solid rgba(244,63,94,.35);background:rgba(244,63,94,.07);border-radius:14px;padding:11px 8px;text-align:center}
+  .sos b{display:block;font-size:1.2rem;color:#fda4af}
+  .sos span{font-size:.68rem;color:var(--muted)}
+  .ph-cats{display:flex;gap:8px;flex-wrap:wrap;flex:none}
+  .ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:12px}
+  .ph-card{position:relative;border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);padding:14px 15px;display:flex;flex-direction:column;gap:3px;cursor:pointer;transition:border-color .2s,transform .2s}
+  .ph-card:hover{border-color:rgba(245,158,11,.4);transform:translateY(-2px)}
+  .ph-card .th{font-size:.8rem;color:var(--muted);padding-right:36px}
+  .ph-card .cn{font-size:1.45rem;font-weight:700;color:var(--gold-2);line-height:1.3}
+  .ph-card .py{font-size:.75rem;color:var(--cyan)}
+  .ph-card .pron{font-size:.75rem;color:var(--text)}
+  .ph-speak{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:10px;border:1px solid var(--border);display:grid;place-items:center;font-size:.85rem;background:rgba(30,41,59,.5)}
+  .ph-speak:hover{border-color:var(--cyan)}
+  .ph-speak.big{position:static;width:auto;height:auto;padding:10px 20px;font-size:.88rem;border-radius:12px;background:rgba(30,41,59,.7)}
+  .ph-hint{font-size:.66rem;color:var(--faint);margin-top:6px}
+  .big-show{
+    position:fixed;inset:0;z-index:70;display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:16px;background:rgba(2,6,23,.96);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    padding:24px;text-align:center;cursor:pointer;
+  }
+  .big-show.show{display:flex;animation:fadeUp .25s ease}
+  .big-cn{font-size:clamp(3rem,14vw,7.5rem);font-weight:800;color:#fff;line-height:1.15;text-wrap:balance}
+  .big-py{font-size:clamp(1rem,3.5vw,1.6rem);color:var(--cyan)}
+  .big-th{font-size:clamp(.95rem,3vw,1.3rem);color:var(--gold-2)}
+  .big-hint{position:absolute;bottom:26px;font-size:.72rem;color:var(--faint)}
+
+  /* ---- Ready checklist view ---- */
+  #view-ready{gap:14px}
+  .rv-top{display:grid;grid-template-columns:minmax(300px,340px) 1fr;gap:12px;flex:none}
+  .ring-card{
+    border:1px solid var(--border);border-radius:var(--radius);
+    background:linear-gradient(160deg,#131f38 0%,#0d1730 100%);
+    display:flex;align-items:center;gap:18px;padding:18px;
+  }
+  .ring-wrap{position:relative;width:110px;height:110px;flex:none}
+  .ring-wrap svg{transform:rotate(-90deg);display:block}
+  .ring-pct{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:1.45rem;color:var(--gold-2)}
+  .ring-info b{display:block;font-size:.95rem;margin-bottom:3px}
+  .ring-info p{margin:0;font-size:.74rem;color:var(--muted);line-height:1.6}
+  .ring-info .num{color:var(--gold-2)}
+  .flights{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .flight{
+    flex:1;border:1px solid var(--border);border-radius:14px;background:var(--panel);
+    display:flex;align-items:center;gap:16px;padding:12px 18px;flex-wrap:wrap;
+  }
+  .flight .fl-dir{font-size:.66rem;letter-spacing:.12em;color:var(--faint);font-weight:700;width:52px;flex:none}
+  .flight .fl-code{font-weight:800;font-size:1rem;color:var(--gold-2)}
+  .flight .fl-route{display:flex;align-items:center;gap:10px;font-weight:700;font-size:.95rem}
+  .flight .fl-route i{font-style:normal;color:var(--cyan)}
+  .flight .fl-meta{margin-left:auto;font-size:.72rem;color:var(--muted);text-align:right;line-height:1.55}
+  .cl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .cl-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);padding:14px 14px 8px}
+  .cl-head{display:flex;align-items:center;gap:9px;margin-bottom:8px;padding:0 4px}
+  .cl-head h4{margin:0;font-size:.92rem}
+  .cl-head .cnt{margin-left:auto;font-size:.7rem;color:var(--muted);font-weight:600}
+  .cl-head .cnt.full{color:#6ee7b7}
+  .cl-item{display:flex;gap:11px;padding:9px 8px;border-radius:10px;cursor:pointer;align-items:flex-start;transition:background .15s}
+  .cl-item:hover{background:rgba(148,163,184,.06)}
+  .cl-check{
+    width:22px;height:22px;border-radius:8px;border:2px solid var(--faint);flex:none;
+    display:grid;place-items:center;font-size:.72rem;font-weight:800;color:#1c1400;
+    margin-top:1px;transition:all .2s;
+  }
+  .cl-item.done .cl-check{
+    background:linear-gradient(135deg,var(--gold),var(--gold-2));
+    border-color:transparent;box-shadow:0 2px 8px rgba(245,158,11,.35);
+  }
+  .cl-body{min-width:0;flex:1}
+  .cl-t{font-size:.85rem;font-weight:500}
+  .cl-item.done .cl-t{color:var(--muted)}
+  .cl-n{font-size:.71rem;color:var(--faint);margin-top:1px}
+  .cl-due{
+    flex:none;align-self:center;font-size:.62rem;font-weight:700;color:#fcd34d;
+    background:var(--gold-soft);border:1px solid rgba(245,158,11,.35);
+    padding:3px 8px;border-radius:99px;white-space:nowrap;
+  }
+  @media (max-width:1240px){.rv-top{grid-template-columns:1fr}}
+
+  /* ---- Driver card & place picker ---- */
+  .drv-chip{
+    padding:8px 16px;border-radius:999px;border:1px solid rgba(245,158,11,.5);
+    background:var(--gold-soft);color:var(--gold-2);font-size:.82rem;font-weight:700;transition:all .2s;
+  }
+  .drv-chip:hover{box-shadow:0 4px 14px rgba(245,158,11,.25);transform:translateY(-1px)}
+  .picker{
+    position:fixed;inset:0;z-index:65;display:none;align-items:center;justify-content:center;
+    background:rgba(2,6,23,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:18px;
+  }
+  .picker.show{display:flex;animation:fadeUp .25s ease}
+  .picker-panel{
+    width:min(520px,100%);max-height:80vh;overflow-y:auto;
+    background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid var(--border);border-radius:var(--radius);padding:18px;
+    display:flex;flex-direction:column;gap:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);
+  }
+  .picker-panel h3{margin:0;font-size:.98rem}
+  .picker-panel .sub2{font-size:.73rem;color:var(--muted);margin-bottom:4px}
+  .place-btn{
+    display:flex;align-items:center;gap:12px;text-align:left;width:100%;
+    border:1px solid var(--border);border-radius:14px;background:rgba(30,41,59,.4);
+    padding:11px 13px;transition:all .2s;
+  }
+  .place-btn:hover{border-color:var(--gold);background:var(--gold-soft)}
+  .place-btn .ic2{font-size:1.15rem;flex:none}
+  .place-btn b{display:block;font-size:.86rem}
+  .place-btn span span{display:block;font-size:.72rem;color:var(--muted)}
+  .big-show .drv-head{font-size:clamp(1rem,3.2vw,1.5rem);color:#a5f3fc;font-weight:700}
+  .big-show .drv-head small{display:block;font-size:.72rem;color:var(--faint);font-weight:500;margin-top:4px}
+  .big-show .drv-title{font-size:clamp(2rem,8.5vw,4.6rem);font-weight:800;color:#fff;line-height:1.25;text-wrap:balance}
+  .big-show .drv-lines{display:flex;flex-direction:column;gap:6px}
+  .big-show .drv-lines div{font-size:clamp(1.05rem,4vw,1.9rem);color:var(--gold-2);font-weight:600}
+  .big-show .drv-thai{font-size:.85rem;color:var(--muted);max-width:540px;line-height:1.6}
+
+  /* ---- SOS view ---- */
+  #view-sos{gap:14px}
+  .sos-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .loc-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);padding:16px;display:flex;flex-direction:column}
+  .loc-cn{font-size:1.25rem;font-weight:700;color:var(--gold-2);margin-top:8px;line-height:1.5}
+  .loc-sub{font-size:.73rem;color:var(--muted);margin-top:4px}
+  .loc-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .med-card{
+    border:1px solid rgba(245,158,11,.45);border-radius:var(--radius);padding:16px;
+    display:flex;flex-direction:column;
+    background:linear-gradient(160deg,#1a2138 0%,#131a2e 55%,#171326 100%);
+    box-shadow:0 0 24px rgba(245,158,11,.08), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .med-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .med-name{font-size:1.02rem;margin:8px 0 8px}
+  .med-row{display:grid;grid-template-columns:100px 1fr;gap:1px 10px;padding:7px 0;border-top:1px dashed var(--border-soft);font-size:.8rem}
+  .med-row .k{color:var(--faint);font-size:.72rem;padding-top:2px}
+  .med-row .v{font-weight:600}
+  .med-row .c{grid-column:2;color:var(--gold-2);font-size:.75rem}
+  .ins-strip{
+    display:block;width:100%;text-align:left;border-radius:14px;padding:12px 15px;font-size:.8rem;
+    border:1px solid rgba(245,158,11,.4);background:var(--gold-soft);color:#fcd34d;cursor:pointer;
+    transition:filter .2s;
+  }
+  .ins-strip:hover{filter:brightness(1.15)}
+  .ins-strip.ok{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.07);color:#a7f3d0}
+  .sos-links{display:flex;gap:8px;flex-wrap:wrap}
+  @media (max-width:860px){.sos-cols{grid-template-columns:1fr}}
+
+  /* ---- Planning mode & board ---- */
+  .mode-pill{display:flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;flex:none;background:rgba(15,23,42,.6)}
+  .mode-pill button{padding:7px 14px;font-size:.74rem;font-weight:600;color:var(--muted);transition:all .2s}
+  .mode-pill button.active{background:var(--active-grad);color:#d1fae5}
+  #view-plan{gap:12px}
+  .plan-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none}
+  .plan-note{font-size:.72rem;color:var(--faint)}
+  .plan-toast{
+    font-size:.75rem;font-weight:600;color:#6ee7b7;
+    border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);
+    padding:6px 12px;border-radius:999px;
+  }
+  .board{display:flex;gap:12px;overflow-x:auto;flex:1;padding-bottom:8px;align-items:flex-start}
+  .bcol{
+    flex:none;width:252px;background:rgba(15,23,42,.55);
+    border:1px solid var(--border);border-radius:var(--radius);
+    padding:10px;display:flex;flex-direction:column;gap:8px;
+  }
+  .bcol.backlog{border-style:dashed;background:rgba(15,23,42,.3)}
+  .bcol-head{display:flex;align-items:baseline;gap:7px;padding:2px 4px}
+  .bcol-head b{font-size:.85rem}
+  .bcol-head span{font-size:.68rem;color:var(--faint)}
+  .bcol-head .bcost{margin-left:auto;color:var(--gold-2);font-weight:700}
+  .bcard{border:1px solid var(--border);border-radius:12px;background:var(--panel);padding:9px 11px;transition:border-color .2s}
+  .bcard:hover{border-color:rgba(245,158,11,.4)}
+  .bcard .btime{font-size:.66rem;color:var(--gold-2);font-weight:700}
+  .bcard .bt{font-size:.79rem;font-weight:600;line-height:1.45;margin-top:1px}
+  .bcard .brow{display:flex;justify-content:space-between;align-items:center;margin-top:7px}
+  .bcard .brow .tag{margin:0}
+  .bmove{display:flex;gap:4px}
+  .bmove button{width:23px;height:23px;border-radius:7px;border:1px solid var(--border);font-size:.62rem;color:var(--muted);display:grid;place-items:center}
+  .bmove button:hover{color:var(--gold-2);border-color:var(--gold)}
+  .badd{border:1px dashed var(--border);border-radius:10px;padding:8px;font-size:.72rem;color:var(--faint);transition:all .2s}
+  .badd:hover{color:var(--gold-2);border-color:var(--gold);background:var(--gold-soft)}
+  .bcard[draggable="true"]{cursor:grab}
+  .bcard.dragging{opacity:.35;border-style:dashed}
+  .bcol.drop{border-color:rgba(34,211,238,.6);background:rgba(34,211,238,.05);box-shadow:0 0 0 1px rgba(34,211,238,.3)}
+  .bcost2{font-size:.68rem;font-weight:700;color:var(--gold-2)}
+  .budget-chip{
+    font-size:.74rem;color:var(--muted);border:1px solid var(--border);
+    background:rgba(30,41,59,.45);padding:6px 12px;border-radius:999px;
+  }
+  .budget-chip b{color:var(--gold-2)}
+  .budget-chip.over{border-color:rgba(244,63,94,.45);background:rgba(244,63,94,.08);color:#fda4af}
+  .budget-chip.over b{color:#fda4af}
+  .tag.cost{color:#fcd34d;background:var(--gold-soft);border:1px solid rgba(245,158,11,.3)}
+
+  /* ---- Booking hub ---- */
+  .book-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px;flex:none}
+  .book-card{
+    border:1px solid var(--border);border-radius:var(--radius);background:var(--panel);
+    padding:13px 14px;display:flex;flex-direction:column;gap:7px;
+    text-decoration:none;color:var(--text);transition:border-color .2s,transform .2s;
+  }
+  .book-card:hover{border-color:var(--gold);transform:translateY(-2px)}
+  .book-top{display:flex;align-items:center;gap:8px}
+  .book-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:1.02rem;background:rgba(30,41,59,.6);border:1px solid var(--border);flex:none}
+  .book-card b{font-size:.84rem}
+  .book-card p{margin:0;font-size:.7rem;color:var(--muted);line-height:1.55}
+  .book-foot{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+  .book-go{font-size:.73rem;color:var(--gold-2);font-weight:700}
+  .partner{margin-left:auto;font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid;flex:none}
+  .partner.trip{color:#7dd3fc;border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.08)}
+  .partner.klook{color:#fdba74;border-color:rgba(251,146,60,.4);background:rgba(251,146,60,.08)}
+  .partner.kkday{color:#5eead4;border-color:rgba(45,212,191,.4);background:rgba(45,212,191,.08)}
+  .aff-note{font-size:.64rem;color:var(--faint)}
+  .bbook{
+    font-size:.62rem;font-weight:700;color:var(--gold-2);text-decoration:none;
+    border:1px solid rgba(245,158,11,.4);background:var(--gold-soft);
+    padding:3px 8px;border-radius:99px;white-space:nowrap;
+  }
+  .bbook:hover{box-shadow:0 2px 8px rgba(245,158,11,.3)}
+
+  /* ---- Plan Doctor & QR handoff & checklist actions ---- */
+  .doc-item{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:12px;background:rgba(30,41,59,.35);padding:10px 12px;text-align:left}
+  .sev{flex:none;font-size:.62rem;font-weight:800;padding:3px 9px;border-radius:99px;margin-top:1px}
+  .sev.crit{color:#fda4af;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.4)}
+  .sev.warn{color:#fcd34d;background:var(--gold-soft);border:1px solid rgba(245,158,11,.4)}
+  .sev.ok{color:#6ee7b7;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.35)}
+  .doc-item p{margin:0;font-size:.78rem;line-height:1.55;color:var(--text)}
+  .doc-item p small{display:block;color:var(--faint);font-size:.68rem;margin-top:3px}
+  #qrCanvas{background:#fff;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.4)}
+  .qr-steps{font-size:.72rem;color:var(--muted);line-height:1.9}
+  .cl-act{
+    flex:none;align-self:center;font-size:.64rem;font-weight:700;text-decoration:none;
+    color:#a5f3fc;border:1px solid rgba(34,211,238,.4);background:rgba(34,211,238,.07);
+    padding:4px 10px;border-radius:99px;white-space:nowrap;cursor:pointer;transition:box-shadow .2s;
+  }
+  .cl-act:hover{box-shadow:0 2px 8px rgba(34,211,238,.25)}
+  .cl-act.aff{color:var(--gold-2);border-color:rgba(245,158,11,.4);background:var(--gold-soft)}
+  .cl-act.aff:hover{box-shadow:0 2px 8px rgba(245,158,11,.3)}
+
+  /* ---- Premium ---- */
+  .premium-btn{
+    border:1px solid rgba(245,158,11,.45);border-radius:14px;text-align:left;
+    background:linear-gradient(135deg,rgba(245,158,11,.16),rgba(245,158,11,.05));
+    padding:11px 13px;font-size:.82rem;font-weight:700;color:var(--gold-2);transition:box-shadow .2s;
+  }
+  .premium-btn small{display:block;font-weight:500;font-size:.68rem;color:var(--muted);margin-top:2px}
+  .premium-btn:hover{box-shadow:0 4px 14px rgba(245,158,11,.25)}
+  .prem-chip{
+    font-size:.52rem;letter-spacing:.1em;color:#1c1400;font-weight:800;
+    background:linear-gradient(135deg,var(--gold),#fde68a);
+    padding:2px 7px;border-radius:99px;vertical-align:middle;
+  }
+  .prem-row{display:grid;grid-template-columns:1fr 70px 90px;gap:6px;font-size:.76rem;padding:8px 4px;border-top:1px dashed var(--border-soft);align-items:center}
+  .prem-row.head{font-size:.62rem;letter-spacing:.08em;color:var(--faint);font-weight:700;border-top:none;text-transform:uppercase}
+  .prem-row span:nth-child(2),.prem-row span:nth-child(3){text-align:center}
+  .prem-row .yes{color:#6ee7b7;font-weight:700}
+  .prem-row .no{color:var(--faint)}
+
+  /* ---- Optimize / steps / eco / confirm ---- */
+  .bopt{margin-left:6px;width:21px;height:21px;border-radius:6px;font-size:.6rem;border:1px solid var(--border);color:var(--muted);flex:none;display:grid;place-items:center}
+  .bopt:hover{color:var(--gold-2);border-color:var(--gold);background:var(--gold-soft)}
+  .steps-strip{
+    border:1px solid rgba(16,185,129,.3);background:rgba(16,185,129,.06);
+    border-radius:14px;padding:10px 14px;font-size:.78rem;color:#a7f3d0;margin-bottom:16px;flex:none;
+  }
+  .steps-strip b{color:#6ee7b7}
+  .eco .map-frame svg{filter:grayscale(1) brightness(.8)}
+  .eco .map-frame{border-color:#334155}
+  #fxSync{transition:transform .3s}
+  #fxSync:hover{transform:rotate(90deg)}
+  .book-confirm[hidden]{display:none}
+  .book-confirm{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:66;
+    display:flex;gap:10px;align-items:center;
+    background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--border);border-radius:16px;padding:12px 16px;
+    font-size:.82rem;box-shadow:0 16px 40px rgba(0,0,0,.5);
+  }
+
+  /* ---- Widget preview & Trip Recap ---- */
+  .wp-card{
+    width:252px;margin:0 auto;border:1px solid var(--border);border-radius:16px;
+    background:linear-gradient(160deg,#131f38,#0d1730);padding:11px 14px;text-align:left;
+  }
+  /* การ์ดเต็มความกว้างสำหรับลิสต์/ฟอร์มในโมดัล — หน้าตาเดียวกับ .wp-card แต่ไม่ล็อก 252px
+     (.wp-card เดิมสงวนไว้ให้พรีวิววิดเจ็ตล็อกสกรีนที่ต้องเป็นขนาดจอมือถือจำลอง) */
+  .modal-card{
+    width:100%;border:1px solid var(--border);border-radius:16px;
+    background:linear-gradient(160deg,#131f38,#0d1730);padding:12px 14px;text-align:left;
+  }
+  .trip-form-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .trip-form-row label{flex:1;min-width:118px;font-size:.72rem;color:var(--muted)}
+  .trip-form-row input,.trip-form-row .tf-text{
+    width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;
+    border:1px solid var(--border);background:rgba(2,6,23,.5);color:var(--text);font:inherit;
+  }
+  .trip-form-row input:focus{outline:none;border-color:rgba(245,158,11,.55)}
+  /* ปฏิทิน/สปินเนอร์ของ input date ใน Chrome เป็นไอคอนดำ มองไม่เห็นบนพื้นมืด */
+  .trip-form-row input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.7)}
+  /* จอแคบ: 3 ช่องไม่พอวางแถวเดียว จะแตกเป็น 2+1 เบี้ยว — บังคับ 1+2 แทน
+     (วันเริ่มเต็มแถว แล้วจำนวนวัน+งบจับคู่กัน) */
+  @media (max-width:560px){
+    .trip-form-row label:first-child{flex-basis:100%}
+  }
+  .wp-head{font-size:.68rem;font-weight:700;color:var(--gold-2);margin-bottom:4px}
+  .wp-row{font-size:.7rem;color:var(--text);line-height:1.7}
+  .wp-row.dim{color:var(--faint)}
+  .recap-card{
+    background:linear-gradient(160deg,#1a2138,#131a2e 55%,#1f1830);
+    padding:24px 20px 18px;text-align:center;display:flex;flex-direction:column;gap:8px;
+  }
+  .rc-top{font-size:.62rem;letter-spacing:.32em;color:var(--gold-2);font-weight:800}
+  .rc-route{font-size:1.5rem;font-weight:800;text-wrap:balance}
+  .rc-dates{font-size:.74rem;color:var(--muted)}
+  .rc-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 4px}
+  .rc-stats b{display:block;font-size:1.05rem;color:var(--gold-2)}
+  .rc-stats span{font-size:.6rem;color:var(--faint)}
+  .rc-foot{font-size:.64rem;color:var(--faint);border-top:1px dashed var(--border-soft);padding-top:10px;margin-top:6px}
+
+  /* ---- Import modal ---- */
+  .drop-zone{
+    border:2px dashed var(--border);border-radius:var(--radius);padding:26px 16px;
+    text-align:center;color:var(--muted);font-size:.84rem;cursor:pointer;transition:all .2s;line-height:1.7;
+  }
+  .drop-zone small{font-size:.7rem;color:var(--faint)}
+  .drop-zone:hover,.drop-zone.over{border-color:var(--gold);background:var(--gold-soft);color:var(--gold-2)}
+  .imp-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px}
+  .imp-table{width:100%;border-collapse:collapse;font-size:.72rem}
+  .imp-table th{font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);background:rgba(30,41,59,.5)}
+  .imp-table th,.imp-table td{padding:7px 10px;border-bottom:1px solid var(--border-soft);text-align:left;white-space:nowrap}
+  .imp-table tr:last-child td{border-bottom:none}
+  @media (max-width:640px){.mode-pill{display:none}}
+
+  /* ===== FAB & overlay (mobile) ===== */
+  .fab{display:none}
+  .overlay{
+    position:fixed;inset:0;background:rgba(2,6,23,.65);backdrop-filter:blur(3px);
+    opacity:0;pointer-events:none;transition:opacity .3s;z-index:40;
+  }
+  .overlay.show{opacity:1;pointer-events:auto}
+
+  /* ===== Responsive ===== */
+  @media (max-width:1240px){
+    :root{--sidebar-w:260px;--dock-w:300px}
+  }
+  @media (max-width:1023px){
+    .app,.app.dock-collapsed{display:block;height:100dvh}
+    .sidebar{
+      position:fixed;z-index:50;top:0;left:0;bottom:0;width:min(84vw,320px);
+      transform:translateX(-105%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+      box-shadow:24px 0 60px rgba(0,0,0,.5);
+    }
+    .sidebar.open{transform:none}
+    .center{height:100dvh}
+    .hamburger{display:grid}
+    .status-chip .long{display:none}
+    .dock{
+      position:fixed;z-index:50;top:0;right:0;bottom:0;width:min(88vw,360px);
+      transform:translateX(105%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+      box-shadow:-24px 0 60px rgba(0,0,0,.5);border-left:1px solid var(--border);
+    }
+    .dock.open{transform:none}
+    .dock-collapse,.dock-rail{display:none!important}
+    .dock-close-m{display:grid!important}
+    .fab{
+      display:grid;place-items:center;position:fixed;z-index:45;right:18px;bottom:20px;
+      width:56px;height:56px;border-radius:18px;font-size:1.35rem;
+      background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1c1400;
+      box-shadow:0 10px 28px rgba(245,158,11,.45);
+    }
+    .sum-grid{grid-template-columns:1fr 1fr}
+    .sum-grid .sum-card:last-child{grid-column:1/-1}
+  }
+  @media (max-width:640px){
+    .view{padding:14px}
+    .view-map{padding:14px}
+    .map-search{min-width:0;flex:1 1 100%;margin-left:0}
+    .topbar{padding:12px 14px}
+    .sum-grid{grid-template-columns:1fr 1fr;gap:9px}
+    .sos-grid{grid-template-columns:1fr 1fr}
+    .cl-grid{grid-template-columns:1fr}
+    .flight .fl-meta{margin-left:0;text-align:left;width:100%}
+  }
+  .dock-close-m{display:none}
+</style>
+
+<div class="app" id="app">
+
+  <!-- ===================== LEFT SIDEBAR ===================== -->
+  <aside class="sidebar" id="sidebar" aria-label="เมนูหลักและภาพรวมทริป">
+    <div class="brand">
+      <div class="brand-badge"><img src="assets/mascot-64.png" alt="หลิงหลิง"></div>
+      <div>
+        <h1>GoPanda<span>CN</span> <span class="prem-chip" id="premChip" hidden>PREMIUM</span></h1>
+        <p>เที่ยวจีนอัจฉริยะ แม้ไร้สัญญาณ</p>
+      </div>
+    </div>
+
+    <div class="trip-card">
+      <div class="trip-top">
+        <div>
+          <span class="label">ทริปปัจจุบัน</span>
+          <div class="trip-city" id="tripCityName">หูหนานครบสูตร
+            <small id="tripCitySub">จางเจียเจี้ย · เฟิ่งหวง · ฝูหรง · เทียนเหมินซาน · ฉางซา</small>
+          </div>
+        </div>
+        <span class="countdown num" id="tripCountdown">อีก 55 วัน</span>
+      </div>
+      <div class="trip-meta num">
+        <div>วันเดินทาง<b id="tripDateRange">12 – 21 ก.ย.</b></div>
+        <div>ระยะเวลา<b id="tripDuration">10 วัน 9 คืน</b></div>
+      </div>
+      <button class="btn-ghost" id="openTrips" style="width:100%;margin-top:10px;justify-content:center">🔀 สลับ/จัดการทริป</button>
+      <div class="ready" id="openReady" role="button" tabindex="0" aria-label="เปิดเช็กลิสต์ความพร้อมก่อนบิน">
+        <div class="ready-row">
+          <span class="label">ความพร้อมก่อนบิน ›</span>
+          <strong class="num" id="readyPct">78%</strong>
+        </div>
+        <div class="ready-bar" id="readyBar" role="progressbar" aria-valuenow="78" aria-valuemin="0" aria-valuemax="100" aria-label="ความพร้อมก่อนเดินทาง">
+          <div class="ready-fill" id="readyFill"></div>
+        </div>
+        <div class="ready-hint" id="readyHint">เหลือ: โหลดแผนที่เฟิ่งหวง+ฝูหรง · แลก CNY สำรอง</div>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="สลับหน้าหลัก">
+      <span class="label" style="padding:0 4px">วางแผนทริป</span>
+      <button class="nav-btn" data-view="plan"><span class="ic">🗂️</span>โต๊ะวางแผนทริป <small style="margin-left:auto;color:var(--faint);font-size:.66rem">Desktop</small></button>
+      <span class="label" style="padding:14px 4px 0">เครื่องมือเดินทาง</span>
+      <button class="nav-btn active" data-view="map"><span class="ic">🗺️</span>แผนที่ท่องเที่ยว</button>
+      <button class="nav-btn" data-view="itin"><span class="ic">🧭</span>แผนเที่ยวรายวัน</button>
+      <button class="nav-btn" data-view="journal"><span class="ic">📔</span>สมุดบันทึก & ค่าใช้จ่าย</button>
+      <button class="nav-btn" data-view="ready"><span class="ic">✈️</span>เช็กลิสต์ก่อนบิน</button>
+      <button class="nav-btn" data-view="sos"><span class="ic">🆘</span>SOS & บัตรสุขภาพ</button>
+      <span class="label" style="padding:14px 4px 0">คลังออฟไลน์</span>
+      <button class="nav-btn" data-view="packs"><span class="ic">📦</span>แพ็กข้อมูลเมือง <small id="packCount" style="margin-left:auto;color:var(--faint);font-size:.7rem">3 เมือง</small></button>
+      <button class="nav-btn" data-view="phrases"><span class="ic">🀄</span>วลีจีนฉุกเฉิน</button>
+    </nav>
+
+    <button class="premium-btn" id="openPremium">✨ GoPanda Premium <small>ปลดล็อกทุกเมือง · Party Mode · ฿149/ทริป</small></button>
+
+    <div class="offline-pill">
+      <span class="offline-dot"></span>
+      พร้อมใช้งานออฟไลน์ — แผนที่ ฉางซา · จางเจียเจี้ย · เทียนเหมินซาน โหลดแล้ว
+    </div>
+  </aside>
+
+  <!-- ===================== CENTER WORKSPACE ===================== -->
+  <main class="center">
+    <header class="topbar">
+      <button class="icon-btn hamburger" id="openSidebar" aria-label="เปิดเมนูหลัก">☰</button>
+      <div>
+        <h2 id="viewTitle">แผนที่ท่องเที่ยว</h2>
+        <div class="sub" id="viewSub">หูหนาน · โหมดออฟไลน์ · อัปเดตแผนที่ 18 ก.ค.</div>
+      </div>
+      <div class="mode-pill" role="group" aria-label="โหมดการใช้งาน">
+        <button id="modePlan">🖥️ วางแผน</button>
+        <button id="modeTrip" class="active">🎒 เดินทาง</button>
+      </div>
+      <span class="status-chip" id="statusChip"><span class="offline-dot"></span><span class="long">ออฟไลน์พร้อมใช้&nbsp;·&nbsp;</span>กำลังหา GPS…</span>
+    </header>
+
+    <div class="views">
+
+      <!-- ---------- MAP ---------- -->
+      <section class="view view-map active" id="view-map" aria-label="แผนที่ท่องเที่ยว">
+        <div class="map-toolbar">
+          <button class="city-chip active">ฉางซา</button>
+          <button class="city-chip">จางเจียเจี้ย</button>
+          <button class="city-chip">เฟิ่งหวง</button>
+          <button class="city-chip">ฝูหรง</button>
+          <button class="city-chip">ฉงลี่</button>
+          <button class="city-chip">ปักกิ่ง</button>
+          <button class="city-chip">เทียนจิน</button>
+          <button class="drv-chip" id="openDriver">🚕 โชว์คนขับ</button>
+          <button class="drv-chip" id="goHome">📍 พากลับที่พัก</button>
+          <button class="cat-chip" id="ecoToggle">🔋 ประหยัดแบต</button>
+          <div class="map-search">🔍 <input type="search" placeholder="ค้นหาที่เที่ยว ร้านอาหาร สถานีรถไฟ…" aria-label="ค้นหาสถานที่"></div>
+          <span class="sub2" id="cityMsg" hidden style="flex-basis:100%;color:var(--gold2)"></span>
+        </div>
+
+        <div class="map-frame">
+          <div id="mapCanvas" role="img" aria-label="แผนที่จริงเมืองฉางซา (MapLibre + PMTiles ออฟไลน์)"></div>
+
+          <div class="map-badge"><span class="offline-dot"></span>MapLibre · เวกเตอร์ไทล์แคชไว้แล้ว 21.7 MB</div>
+          <div class="zoom-ctl"><button id="mapZoomIn" aria-label="ซูมเข้า">＋</button><button id="mapZoomOut" aria-label="ซูมออก">－</button></div>
+
+          <div class="pin-pop show" id="pinPop" role="dialog" aria-label="รายละเอียดสถานที่">
+            <h4 id="popTitle"><span>📍</span>IFS ฉางซา (国金中心)</h4>
+            <p id="popDesc">แลนด์มาร์กใจกลางเมือง จุดถ่ายรูปหมี KAWS ชั้น 7 · ห่างจากที่พัก 850 ม. เดิน 11 นาที · เปิด 10:00–22:00</p>
+            <div class="row">
+              <button class="btn-gold">🧭 นำทางออฟไลน์</button>
+              <button class="btn-ghost">＋ ใส่แผนวัน 2</button>
+              <button class="btn-ghost" id="audioGuide">🎧 ไกด์เสียง</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- ITINERARY ---------- -->
+      <section class="view" id="view-itin" aria-label="แผนเที่ยวรายวัน">
+        <div class="day-strip" id="dayStrip"></div>
+        <div class="itin-head">
+          <h3 id="itinTitle">วัน 2 · <em>เดินเมืองฉางซา สายกิน</em></h3>
+          <span class="sub num" id="itinMeta">5 จุดหมาย · เดินรวม 4.2 กม.</span>
+        </div>
+        <div class="timeline" id="timeline"></div>
+        <button class="add-stop">＋ เพิ่มจุดหมายในวันนี้</button>
+      </section>
+
+      <!-- ---------- JOURNAL ---------- -->
+      <section class="view" id="view-journal" aria-label="สมุดบันทึกและค่าใช้จ่าย">
+        <div class="sum-grid">
+          <div class="sum-card gold"><span class="label">ใช้ไปแล้ว</span><b class="num" id="jTotalSpent">¥1,286</b><small class="num" id="jTotalSub">≈ ฿6,250 · 8 วัน</small></div>
+          <div class="sum-card green"><span class="label">งบคงเหลือ</span><b class="num" id="jRemaining">¥4,714</b><small class="num" id="jRemainingSub">จากงบ ¥6,000</small></div>
+          <div class="sum-card"><span class="label">เฉลี่ยต่อวัน</span><b class="num" id="jAvgPerDay">¥161</b><small class="num">ต่อวันตลอดทริป</small></div>
+        </div>
+
+        <div class="spend-bar" role="img" aria-label="สัดส่วนค่าใช้จ่าย อาหาร 42% เดินทาง 25% ตั๋วเข้าชม 21% ช้อปปิ้ง 12%">
+          <i style="width:42%;background:#f59e0b"></i>
+          <i style="width:25%;background:#22d3ee"></i>
+          <i style="width:21%;background:#10b981"></i>
+          <i style="width:12%;background:#8b5cf6"></i>
+        </div>
+        <div class="legend">
+          <span><i style="background:#f59e0b"></i>อาหาร 42%</span>
+          <span><i style="background:#22d3ee"></i>เดินทาง 25%</span>
+          <span><i style="background:#10b981"></i>ตั๋วเข้าชม 21%</span>
+          <span><i style="background:#8b5cf6"></i>ช้อปปิ้ง 12%</span>
+        </div>
+
+        <div class="steps-strip num">👣 วันนี้เดินแล้ว <b>17,842 ก้าว</b> · 12.4 กม. · แซงเป้าซ้อมเดินจางเจียเจี้ยแล้ว 🏆</div>
+
+        <div class="itin-head" style="margin-top:0">
+          <h3>บันทึกวันนี้ · <em>20 ก.ย. (วัน 9 ฉางซา)</em></h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" id="openRecap">🎞️ สรุปทริป</button>
+            <button class="btn-gold">＋ จดรายการใหม่</button>
+          </div>
+        </div>
+        <div class="exp-list">
+          <div id="expListSaved"></div>
+        </div>
+      </section>
+
+      <!-- ---------- CITY PACKS ---------- -->
+      <section class="view" id="view-packs" aria-label="แพ็กข้อมูลเมือง">
+        <div class="store-card">
+          <div class="store-row">
+            <div><span class="label">พื้นที่ที่ใช้</span><b class="num" id="storeUsed">605 MB</b><small class="num"> / กันไว้ 2 GB</small></div>
+            <div class="store-free num">พื้นที่ว่างในเครื่อง 23.4 GB · อัปเดตอัตโนมัติเมื่อต่อ Wi-Fi</div>
+          </div>
+          <div class="store-meter" role="progressbar" aria-label="พื้นที่แพ็กข้อมูลที่ใช้ไป"><i id="storeFill" style="width:30%"></i></div>
+        </div>
+        <div class="itin-head" style="margin:4px 2px 0">
+          <h3>เมืองในทริปนี้ · <em>ฉางซา–จางเจียเจี้ย</em></h3>
+          <span class="sub">แตะดาวน์โหลดเพื่อลองจำลองการโหลด</span>
+        </div>
+        <div class="pack-grid" id="packGridTrip"></div>
+        <div class="itin-head" style="margin:10px 2px 0">
+          <h3>เมืองยอดนิยม · <em>โหลดล่วงหน้าก่อนบิน</em></h3>
+        </div>
+        <div class="pack-grid" id="packGridMore"></div>
+      </section>
+
+      <!-- ---------- PHRASES ---------- -->
+      <section class="view" id="view-phrases" aria-label="วลีจีนฉุกเฉิน">
+        <div class="sos-grid">
+          <div class="sos"><b class="num">110</b><span>ตำรวจ 报警</span></div>
+          <div class="sos"><b class="num">120</b><span>รถพยาบาล 急救</span></div>
+          <div class="sos"><b class="num">119</b><span>ดับเพลิง 火警</span></div>
+          <div class="sos"><b class="num" style="font-size:.92rem;line-height:1.7">+86 10 8531 8888</b><span>สถานทูตไทย ปักกิ่ง</span></div>
+        </div>
+        <div class="ph-cats" id="phCats" role="tablist" aria-label="หมวดวลี"></div>
+        <div class="ph-grid" id="phGrid"></div>
+      </section>
+
+      <!-- ---------- READY CHECKLIST ---------- -->
+      <section class="view" id="view-ready" aria-label="ความพร้อมก่อนบิน">
+        <div class="rv-top">
+          <div class="ring-card">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 120 120" width="110" height="110" aria-hidden="true">
+                <defs>
+                  <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#fde68a"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#111c33" stroke-width="10"/>
+                <circle id="ringFg" cx="60" cy="60" r="52" fill="none" stroke="url(#ringGrad)"
+                        stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7"
+                        stroke-dashoffset="71.9" style="transition:stroke-dashoffset .5s ease"/>
+              </svg>
+              <div class="ring-pct num" id="ringPct">78%</div>
+            </div>
+            <div class="ring-info">
+              <b id="ringMsg">เกือบพร้อมแล้ว 🐼</b>
+              <p>ติ๊กแล้ว <span class="num" id="ringDone">14/19</span> รายการ<br>
+              เหลืออีก <span class="num">55 วัน</span>ก่อนออกเดินทาง</p>
+            </div>
+          </div>
+          <div class="flights">
+            <div class="flight">
+              <span class="fl-dir">ขาไป</span>
+              <span class="fl-code">CZ3036</span>
+              <span class="fl-route num">BKK 03:00 <i>✈</i> CSX 10:50</span>
+              <span class="fl-meta num">12 ก.ย. · China Southern · ต่อเครื่องกว่างโจว<br>ถึงแล้วต่อรถไฟเข้าจางเจียเจี้ยเลย 🚄</span>
+            </div>
+            <div class="flight">
+              <span class="fl-dir">ขากลับ</span>
+              <span class="fl-code">CZ559</span>
+              <span class="fl-route num">CSX 18:00 <i>✈</i> BKK 01:30+1</span>
+              <span class="fl-meta num">21 ก.ย. · สนามบินหวงฮวา T2 · ต่อเครื่องกว่างโจว<br>ถึงสนามบินก่อน 15:30 นะครับ</span>
+            </div>
+          </div>
+        </div>
+        <div class="cl-grid" id="clGrid"></div>
+      </section>
+
+      <!-- ---------- SOS & MEDICAL ---------- -->
+      <section class="view" id="view-sos" aria-label="SOS และบัตรสุขภาพ">
+        <div class="sos-grid">
+          <div class="sos"><b class="num">110</b><span>ตำรวจ 报警</span></div>
+          <div class="sos"><b class="num">120</b><span>รถพยาบาล 急救</span></div>
+          <div class="sos"><b class="num">119</b><span>ดับเพลิง 火警</span></div>
+          <div class="sos"><b class="num" style="font-size:.92rem;line-height:1.7">+86 10 8531 8888</b><span>สถานทูตไทย ปักกิ่ง</span></div>
+        </div>
+
+        <div class="sos-cols">
+          <div class="loc-card">
+            <span class="label">📍 ตำแหน่งของฉันตอนนี้ · GPS ออฟไลน์</span>
+            <div class="loc-cn">湖南省长沙市芙蓉区<br>五一大道98号附近</div>
+            <div class="loc-sub num">28.1958° N, 112.9773° E · แม่นยำ ±8 ม. · อัปเดตเมื่อครู่</div>
+            <div class="loc-row">
+              <button class="btn-gold" id="sosShowLoc">🪧 ขยายโชว์เจ้าหน้าที่</button>
+              <button class="btn-ghost" id="sosDriverHome">🚕 โชว์คนขับ พากลับโรงแรม</button>
+            </div>
+          </div>
+
+          <div class="med-card">
+            <div class="med-head">
+              <span class="label">บัตรสุขภาพฉุกเฉิน · 医疗卡</span>
+              <button class="btn-ghost" style="padding:5px 12px;font-size:.7rem">แก้ไข</button>
+            </div>
+            <b class="med-name">นายโจ ใจดี · MR. JOE JAIDEE</b>
+            <div class="med-row"><span class="k">กรุ๊ปเลือด</span><span class="v num">O+</span><span class="c">血型 O型 RH阳性</span></div>
+            <div class="med-row"><span class="k">แพ้ยา</span><span class="v">เพนิซิลลิน (Penicillin)</span><span class="c">对青霉素过敏</span></div>
+            <div class="med-row"><span class="k">โรคประจำตัว</span><span class="v">ความดันโลหิตสูง</span><span class="c">高血压</span></div>
+            <div class="med-row"><span class="k">ยาที่ใช้</span><span class="v">Amlodipine 5mg (เช้า)</span><span class="c">每天早上服用氨氯地平</span></div>
+            <div class="med-row"><span class="k">ติดต่อฉุกเฉิน</span><span class="v num">คุณหมวย (ภรรยา) +66 89 123 4567</span><span class="c">紧急联系人（妻子）</span></div>
+            <button class="btn-gold" id="sosShowMed" style="margin-top:14px;align-self:flex-start">🪧 ขยายโชว์หมอ / กู้ภัย</button>
+          </div>
+        </div>
+
+        <button class="ins-strip" id="sosInsurance"></button>
+
+        <div class="sos-links">
+          <button class="btn-ghost" id="sosPhrases">🀄 เปิดวลีฉุกเฉินตัวใหญ่</button>
+          <button class="btn-ghost" id="sosPacksLink">📦 เช็กแผนที่ออฟไลน์</button>
+        </div>
+      </section>
+
+      <!-- ---------- PLANNING BOARD (Desktop) ---------- -->
+      <section class="view" id="view-plan" aria-label="โต๊ะวางแผนทริป">
+        <div class="plan-bar">
+          <button class="btn-gold" id="openImport">📥 นำเข้า Excel / CSV</button>
+          <button class="btn-ghost" id="exportCsv">📤 ส่งออก CSV</button>
+          <button class="btn-ghost" id="exportXlsx">📊 ส่งออก Excel (จัดฟอร์แมต)</button>
+          <a class="btn-ghost" id="dlTemplate" download="gopanda-trip-template.csv" style="display:inline-block;text-decoration:none">⬇ เทมเพลต</a>
+          <button class="btn-ghost" id="openDoctor">🩺 ตรวจแผน</button>
+          <button class="btn-ghost" id="openQr">📱 ส่งเข้ามือถือ</button>
+          <button class="btn-ghost" id="openAi">🪄 หลิงหลิงจัดทริป</button>
+          <span class="plan-toast" id="planToast" hidden></span>
+          <span class="budget-chip num" id="planBudget"></span>
+          <span class="plan-note" style="margin-left:auto">ลากการ์ดข้ามวันได้เลย (หรือใช้ปุ่ม ◀ ▶) · sync กับหน้า "แผนเที่ยวรายวัน" ทันที</span>
+        </div>
+
+        <div class="itin-head" style="margin:2px 2px 0">
+          <h3>🎟️ จองตั๋วล่วงหน้า · <em>ถูกกว่าหน้างาน แถมไม่ต้องต่อคิว</em></h3>
+          <span class="aff-note">ลิงก์พันธมิตร (Affiliate) — ราคาเท่าเดิม แต่ช่วยสนับสนุนแอป 🐼</span>
+        </div>
+        <div class="book-grid">
+          <a class="book-card" id="bkFlight" target="_blank" rel="noopener sponsored">
+            <span class="book-top"><span class="book-ic">✈️</span><b>ตั๋วเครื่องบิน</b><span class="partner trip">Trip.com</span></span>
+            <p>BKK → ฉางซา (CSX)<br>12 – 21 ก.ย. · China Southern จองแล้ว ✓</p>
+            <span class="book-foot"><span class="aff-note">เทียบทุกสายการบิน</span><span class="book-go">จองเลย ↗</span></span>
+          </a>
+          <a class="book-card" id="bkTrain" target="_blank" rel="noopener sponsored">
+            <span class="book-top"><span class="book-ic">🚄</span><b>ตั๋วรถไฟจีน</b><span class="partner trip">Trip.com</span></span>
+            <p>ฉางซาใต้ → จางเจียเจี้ยตะวันตก<br>เปิดจองล่วงหน้า 15 วัน</p>
+            <span class="book-foot"><span class="aff-note">ไม่ต้องใช้ 12306</span><span class="book-go">จองเลย ↗</span></span>
+          </a>
+          <a class="book-card" id="bkTripTtd" target="_blank" rel="noopener sponsored">
+            <span class="book-top"><span class="book-ic">🏞️</span><b>ตั๋วที่เที่ยว</b><span class="partner trip">Trip.com</span></span>
+            <p>Things to Do จีนครบสุด<br>จองพร้อมตั๋วบิน/รถไฟ ที่เดียวจบ</p>
+            <span class="book-foot"><span class="aff-note">จ่ายบาทได้</span><span class="book-go">จองเลย ↗</span></span>
+          </a>
+          <a class="book-card" id="bkKlook" target="_blank" rel="noopener sponsored">
+            <span class="book-top"><span class="book-ic">🎢</span><b>ตั๋วที่เที่ยว</b><span class="partner klook">Klook</span></span>
+            <p>อุทยานจางเจียเจี้ย · เทียนเหมินซาน<br>สะพานแก้ว · ลิฟต์ไป่หลง</p>
+            <span class="book-foot"><span class="aff-note">QR เข้างานทันที</span><span class="book-go">จองเลย ↗</span></span>
+          </a>
+          <a class="book-card" id="bkKkday" target="_blank" rel="noopener sponsored">
+            <span class="book-top"><span class="book-ic">🎭</span><b>ทัวร์ & กิจกรรม</b><span class="partner kkday">KKday</span></span>
+            <p>เดย์ทัวร์ไกด์ท้องถิ่น · โชว์จิ้งจอกเหมยลี่<br>ชุดฮั่นฝูถ่ายรูป</p>
+            <span class="book-foot"><span class="aff-note">รีวิวคนไทยเพียบ</span><span class="book-go">จองเลย ↗</span></span>
+          </a>
+        </div>
+
+        <div class="board" id="board" aria-label="บอร์ดวางแผนรายวัน"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===================== RIGHT DOCK ===================== -->
+  <aside class="dock" id="dock" aria-label="ผู้ช่วยและเครื่องมือด่วน">
+    <div class="dock-head">
+      <h3>🧰 กล่องเครื่องมือ</h3>
+      <button class="icon-btn dock-close-m" id="closeDock" aria-label="ปิดกล่องเครื่องมือ">✕</button>
+      <button class="icon-btn dock-collapse" id="dockToggle" aria-label="พับเก็บกล่องเครื่องมือ" title="พับเก็บ">⇥</button>
+    </div>
+
+    <div class="dock-rail">
+      <button class="rail-btn" id="railExpand" aria-label="ขยายกล่องเครื่องมือ" title="ขยาย">⇤</button>
+      <button class="rail-btn" aria-label="แชทผู้ช่วย">💬</button>
+      <button class="rail-btn" aria-label="แลกเงิน">¥</button>
+    </div>
+
+    <div class="dock-body">
+      <!-- AI chat -->
+      <div class="chat">
+        <div class="chat-title">
+          <span class="ava"><img src="assets/mascot-64.png" alt="หลิงหลิง"></span>
+          <div><b>น้องหลิงหลิง — AI พาทัวร์</b><br><span>● ทำงานออฟไลน์บนเครื่อง</span></div>
+        </div>
+        <div class="chat-msgs" id="chatMsgs">
+          <div class="msg ai">หนีห่าวค่ะป๋า 🐼 วันนี้อยู่โซน IFS ฉางซา อยากให้หลิงหลิงช่วยอะไรดีคะ ถามได้เลยไม่ต้องใช้เน็ต~</div>
+          <div class="msg me">ร้านเช้าใกล้ที่พัก เดินไม่เกิน 10 นาที</div>
+          <div class="msg ai">แนะนำ 2 ร้านค่ะ ① เมี่ยนฝู่หูหนาน (เส้นหมี่น้ำ ¥12) เดิน 6 นาที ② ร้านเปาจื่อเจ้าเก่า เปิดตี 5 เดิน 8 นาที — กดหมุดบนแผนที่ให้แล้วนะคะ 📍</div>
+        </div>
+        <div class="chips">
+          <button data-q="วลีสั่งอาหารแบบไม่เผ็ด">🌶️ ขอไม่เผ็ด พูดยังไง</button>
+          <button data-q="รถไฟฟ้าไปสถานีรถไฟฉางซาใต้">🚄 ไปสถานีรถไฟใต้</button>
+          <button data-q="ของฝากจากฉางซา">🎁 ของฝากเด็ด</button>
+        </div>
+        <div class="chat-input">
+          <input id="chatBox" type="text" placeholder="พิมพ์ถามหลิงหลิง…" aria-label="พิมพ์ข้อความถึงผู้ช่วย AI">
+          <button class="send-btn" id="chatSend" aria-label="ส่งข้อความ">➤</button>
+        </div>
+      </div>
+
+      <!-- FX converter -->
+      <div class="fx">
+        <div class="fx-head"><b>💱 แลกเงินด่วน THB ↔ CNY</b><span style="display:flex;align-items:center;gap:6px"><span id="fxNote">เรทออฟไลน์ 17 ก.ค.</span><button id="fxSync" aria-label="ซิงก์เรทล่าสุด" title="ซิงก์เรทเมื่อมีเน็ต" style="font-size:.8rem">🔄</button></span></div>
+        <div class="fx-row">
+          <div class="fx-field"><label>CNY ¥</label><input id="fxCny" class="num" type="number" inputmode="decimal" value="100" aria-label="จำนวนเงินหยวน"></div>
+          <button class="fx-swap" id="fxSwap" aria-label="สลับสกุลเงิน">⇄</button>
+          <div class="fx-field"><label>THB ฿</label><input id="fxThb" class="num" type="number" inputmode="decimal" value="486" aria-label="จำนวนเงินบาท"></div>
+        </div>
+        <div class="fx-rate num" id="fxRate">อัตรา <b>¥1 = ฿4.86</b> · อิงเรทซุปเปอร์ริช สาขาสีลม</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <button class="btn-ghost" id="fxSaveExpense" style="flex:none">＋ บันทึกเป็นรายจ่าย</button>
+          <span id="fxSaveMsg" style="font-size:.72rem;color:#6ee7b7" hidden></span>
+        </div>
+        <span class="label" style="display:block;margin-bottom:8px">ป้ายราคาที่เจอบ่อย</span>
+        <div class="preset-grid" id="presets">
+          <button class="preset num" data-cny="10"><b>¥10</b><span>฿48.6</span></button>
+          <button class="preset num" data-cny="25"><b>¥25</b><span>฿121.5</span></button>
+          <button class="preset num" data-cny="50"><b>¥50</b><span>฿243</span></button>
+          <button class="preset num" data-cny="100"><b>¥100</b><span>฿486</span></button>
+          <button class="preset num" data-cny="200"><b>¥200</b><span>฿972</span></button>
+          <button class="preset num" data-cny="500"><b>¥500</b><span>฿2,430</span></button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <button class="fab" id="openDock" aria-label="เปิดกล่องเครื่องมือ">🧰</button>
+  <div class="overlay" id="overlay"></div>
+
+  <div class="big-show" id="bigShow" role="dialog" aria-label="โชว์วลีตัวอักษรใหญ่">
+    <div class="big-cn" id="bigCn"></div>
+    <div class="big-py" id="bigPy"></div>
+    <div class="big-th" id="bigTh"></div>
+    <button class="ph-speak big" id="bigSpeak">🔊 เล่นเสียงให้ฟัง</button>
+    <div class="big-hint">แตะที่ว่างเพื่อปิด · หันจอให้คนจีนอ่านได้เลย</div>
+  </div>
+
+  <div class="big-show" id="driverShow" role="dialog" aria-label="การ์ดโชว์คนขับ">
+    <div class="drv-head" id="drvHead"></div>
+    <div class="drv-title" id="drvTitle"></div>
+    <div class="drv-lines" id="drvLines"></div>
+    <div class="drv-thai" id="drvThai"></div>
+    <button class="ph-speak big" id="drvSpeak">🔊 อ่านให้คนขับฟัง</button>
+    <div class="big-hint">แตะที่ว่างเพื่อปิด · หันจอให้คนขับดูได้เลย</div>
+  </div>
+
+  <div class="picker" id="placePick" role="dialog" aria-label="เลือกสถานที่ที่จะไป">
+    <div class="picker-panel">
+      <h3>🚕 จะให้พาไปไหนครับ?</h3>
+      <div class="sub2">เลือกสถานที่ แล้วหันจอให้คนขับ DiDi/แท็กซี่ดูได้เลย — ใช้งานออฟไลน์</div>
+      <div id="placeList" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="add-stop" style="margin:4px 0 0;width:100%">＋ เพิ่มสถานที่ของฉัน</button>
+    </div>
+  </div>
+
+  <div class="picker" id="importModal" role="dialog" aria-label="นำเข้าแผนทริปจากไฟล์">
+    <div class="picker-panel" style="width:min(660px,100%)">
+      <h3>📥 นำเข้าแผนทริปจาก Excel / CSV</h3>
+      <div class="sub2">คอลัมน์ที่รองรับ: <b>วัน, เวลา, สถานที่, รายละเอียด, หมวด, งบ(¥)</b> — หมวด: อาหาร / ที่เที่ยว / เดินทาง / ที่พัก · งบใส่หรือไม่ก็ได้</div>
+      <div class="drop-zone" id="dropZone" role="button" tabindex="0">
+        📄 วางไฟล์ที่นี่ หรือคลิกเพื่อเลือกไฟล์<br>
+        <small>รองรับทั้ง .csv (UTF-8) และ .xlsx / .xls โดยตรง — อ่านชีตแรกของไฟล์</small>
+      </div>
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" hidden>
+      <button class="btn-ghost" id="demoImport">✨ ลองด้วยข้อมูลตัวอย่าง — กิจกรรมเสริมยามค่ำ วัน 6–9 (4 รายการ)</button>
+      <div id="impPreview" style="display:none;flex-direction:column;gap:10px">
+        <div class="imp-wrap"><table class="imp-table" id="impTable"></table></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn-gold" id="impConfirm">นำเข้าทั้งหมด</button>
+          <button class="btn-ghost" id="impCancel">ยกเลิก</button>
+          <span class="plan-note" id="impMsg"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="picker" id="docModal" role="dialog" aria-label="ผลตรวจแผนทริป">
+    <div class="picker-panel" style="width:min(560px,100%)">
+      <h3>🩺 หมอตรวจแผน — โดยหลิงหลิง</h3>
+      <div class="sub2" id="docSummary"></div>
+      <div id="docList" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button class="btn-ghost" id="docClose" style="align-self:flex-end">ปิด</button>
+    </div>
+  </div>
+
+  <div class="picker" id="qrModal" role="dialog" aria-label="ส่งทริปเข้ามือถือ">
+    <div class="picker-panel" style="width:min(480px,100%);align-items:center;text-align:center">
+      <h3>📱 ส่งทริปเข้ามือถือ</h3>
+      <div class="sub2" id="qrMeta"></div>
+      <canvas id="qrCanvas" width="232" height="232" aria-label="QR code สำหรับสแกนรับทริป"></canvas>
+      <div class="qr-steps">1️⃣ เปิด GoPandaCN บนมือถือ · 2️⃣ แตะ "สแกนรับทริป" · 3️⃣ ทริปทั้งก้อนเข้าเครื่องทันที ไม่ต้องใช้เน็ต</div>
+      <button class="btn-gold" id="dlTrip">💾 หรือบันทึกเป็นไฟล์ .gopanda ส่งให้เพื่อนร่วมทริป</button>
+      <div class="sub2" style="margin-top:10px">หรือ</div>
+      <input type="file" id="gopandaFileInput" accept=".gopanda,application/json" hidden>
+      <button class="btn-ghost" id="importGopanda">📂 นำเข้าไฟล์ .gopanda</button>
+      <div id="gopandaImportPreview" style="display:none;margin-top:8px" class="modal-card">
+        <div id="gopandaImportMsg" class="wp-row"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn-gold" id="gopandaImportConfirm" style="flex:1">✓ ยืนยันนำเข้า (แทนที่แผนปัจจุบัน)</button>
+          <button class="btn-ghost" id="gopandaImportCancel">ยกเลิก</button>
+        </div>
+      </div>
+      <div class="wp-card">
+        <div class="wp-head">🐼 GoPandaCN · วันนี้ (วัน 2 · เฟิ่งหวง)</div>
+        <div class="wp-row num">10:00 รถไฟ → 14:00 เมืองเก่า → 19:30 ไฟริมน้ำ</div>
+        <div class="wp-row dim num">¥1 = ฿4.86 · ออฟไลน์พร้อม ✓ · แบต 82%</div>
+      </div>
+      <div class="aff-note">ตัวอย่างวิดเจ็ตหน้าจอล็อกบนมือถือ · QR จำลองสำหรับเดโม — เวอร์ชันจริงสแกนได้และเข้ารหัสข้อมูลทริป</div>
+    </div>
+  </div>
+
+  <div class="picker" id="tripsModal" role="dialog" aria-label="สลับหรือจัดการทริป">
+    <div class="picker-panel" style="width:min(520px,100%)">
+      <h3>🔀 ทริปของฉัน</h3>
+      <div class="sub2">สลับไปทริปอื่น หรือสร้างทริปใหม่ — บันทึกไว้ในเครื่องนี้เท่านั้น (ยังไม่ sync ข้ามอุปกรณ์)</div>
+      <div id="tripsList" style="display:flex;flex-direction:column;gap:8px;margin:12px 0"></div>
+      <div class="modal-card">
+        <div class="wp-head">➕ สร้างทริปใหม่</div>
+        <div class="trip-form-row">
+          <input type="text" id="newTripName" class="tf-text" placeholder="ชื่อทริป เช่น ปักกิ่ง-เทียนจิน-Chongli" style="margin-top:0">
+        </div>
+        <div class="trip-form-row">
+          <label>วันเริ่มทริป
+            <input type="date" id="newTripStart">
+          </label>
+          <label>จำนวนวัน
+            <input type="number" id="newTripDays" min="1" max="30" value="7">
+          </label>
+          <label>งบทริป (¥)
+            <input type="number" id="newTripBudget" min="0" step="100" value="6000">
+          </label>
+        </div>
+        <button class="btn-gold" id="createTripBtn" style="width:100%;margin-top:10px;justify-content:center">สร้างทริป</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="picker" id="premModal" role="dialog" aria-label="GoPanda Premium">
+    <div class="picker-panel" style="width:min(500px,100%)">
+      <h3>✨ GoPanda Premium</h3>
+      <div class="sub2">จ่ายครั้งเดียวต่อทริป ไม่ผูกรายเดือน — เที่ยวจบ จบกัน ไม่มีลืมยกเลิก</div>
+      <div class="prem-row head"><span>สิทธิประโยชน์</span><span>ฟรี</span><span>Premium</span></div>
+      <div class="prem-row"><span>แพ็กเมืองออฟไลน์</span><span class="no">1 เมือง</span><span class="yes">ทุกเมือง</span></div>
+      <div class="prem-row"><span>ถามหลิงหลิง AI</span><span class="no">20/วัน</span><span class="yes">ไม่จำกัด</span></div>
+      <div class="prem-row"><span>Party Mode แก๊งไร้เน็ต</span><span class="no">–</span><span class="yes">✓</span></div>
+      <div class="prem-row"><span>เสียงไกด์ + แผนที่ HD</span><span class="no">–</span><span class="yes">✓</span></div>
+      <div class="prem-row"><span>สนับสนุนแอปของคนไทย</span><span class="yes">✓</span><span class="yes">✓ ❤️</span></div>
+      <button class="btn-gold" id="premGo" style="margin-top:8px">อัปเกรด ฿149 / ทริปนี้ (เดโม)</button>
+      <span class="aff-note" id="premNote">ชำระผ่าน App Store / Play Store · ใช้ได้ถึงวันกลับ + 7 วัน</span>
+    </div>
+  </div>
+
+  <div class="picker" id="aiModal" role="dialog" aria-label="ให้หลิงหลิงจัดทริป">
+    <div class="picker-panel" style="width:min(480px,100%)">
+      <h3>🪄 ให้หลิงหลิงจัดทริปให้</h3>
+      <div class="sub2">เลือกสไตล์ แล้วหลิงหลิงจะเติมแผนลง<b>วันที่ยังว่าง</b>ให้ทันที (วันที่มีแผนแล้วไม่แตะนะคะ)</div>
+      <div class="ph-cats" id="aiStyles">
+        <button class="cat-chip active" data-style="สายกิน">🍜 สายกิน</button>
+        <button class="cat-chip" data-style="สายธรรมชาติ">⛰️ สายธรรมชาติ</button>
+        <button class="cat-chip" data-style="พาพ่อแม่">👵 พาพ่อแม่</button>
+      </div>
+      <button class="btn-gold" id="aiGo">✨ จัดเลยหลิงหลิง</button>
+    </div>
+  </div>
+
+  <div class="picker" id="recapModal" role="dialog" aria-label="สรุปทริปแชร์ได้">
+    <div class="picker-panel" style="width:min(460px,100%);padding:0;overflow:hidden">
+      <div class="recap-card" id="recapCard"></div>
+      <div style="display:flex;gap:8px;padding:14px 16px;align-items:center;flex-wrap:wrap">
+        <button class="btn-gold" id="recapShare">📤 แชร์ให้เพื่อน</button>
+        <button class="btn-ghost" id="recapSave">💾 บันทึกรูป</button>
+        <span class="plan-note" id="recapMsg"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="book-confirm" id="bookConfirm" hidden>
+    <span id="bcText">เมื่อกี้จองสำเร็จไหมคะ?</span>
+    <button class="btn-gold" id="bcYes">✓ จองแล้ว</button>
+    <button class="btn-ghost" id="bcNo">ยังไม่จอง</button>
+  </div>
+</div>
+
+<script src="vendor/pmtiles/pmtiles.js"></script>
+<script src="vendor/maplibre/maplibre-gl.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script>
+(function(){
+  var $=function(s,c){return (c||document).querySelector(s)};
+  var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
+
+  /* ---- view switching ---- */
+  var titles={
+    map:["แผนที่ท่องเที่ยว","หูหนาน · โหมดออฟไลน์ · อัปเดตแผนที่ 18 ก.ค."],
+    itin:["แผนเที่ยวรายวัน","ทริปหูหนานครบสูตร · 12–21 ก.ย. · 10 วัน 9 คืน"],
+    journal:["สมุดบันทึก & ค่าใช้จ่าย","งบทริป ¥6,000 · ใช้ไป 21%"],
+    packs:["แพ็กข้อมูลเมือง","จัดการแผนที่ & ข้อมูลออฟไลน์รายเมือง"],
+    phrases:["วลีจีนฉุกเฉิน","แตะการ์ดเพื่อขยายตัวอักษรใหญ่ให้คนจีนอ่าน"],
+    ready:["ความพร้อมก่อนบิน","บิน 12 ก.ย. 03:00 (CZ3036) · แตะรายการเพื่อติ๊กว่าเสร็จแล้ว"],
+    sos:["SOS & บัตรสุขภาพ","ทุกอย่างในหน้านี้ใช้ได้แบบออฟไลน์ · แตะการ์ดเพื่อขยายโชว์"],
+    plan:["โต๊ะวางแผนทริป","โหมดวางแผนสำหรับจอใหญ่ · ย้ายการ์ดข้ามวัน + นำเข้าไฟล์ Excel/CSV"]
+  };
+  function showView(v){
+    $$(".nav-btn").forEach(function(b){b.classList.toggle("active",b.dataset.view===v)});
+    $$(".view").forEach(function(s){s.classList.remove("active")});
+    $("#view-"+v).classList.add("active");
+    $("#viewTitle").textContent=titles[v][0];
+    $("#viewSub").textContent=titles[v][1];
+    $("#modePlan").classList.toggle("active",v==="plan");
+    $("#modeTrip").classList.toggle("active",v!=="plan");
+    closeDrawers();
+  }
+  $("#modePlan").addEventListener("click",function(){showView("plan")});
+  $("#modeTrip").addEventListener("click",function(){showView("map")});
+  $$(".nav-btn").forEach(function(btn){
+    btn.addEventListener("click",function(){showView(btn.dataset.view)});
+  });
+  var openReady=$("#openReady");
+  openReady.addEventListener("click",function(){showView("ready")});
+  openReady.addEventListener("keydown",function(e){
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();showView("ready")}
+  });
+
+  /* ---- dock collapse (desktop) ---- */
+  var app=$("#app");
+  $("#dockToggle").addEventListener("click",function(){app.classList.add("dock-collapsed")});
+  $("#railExpand").addEventListener("click",function(){app.classList.remove("dock-collapsed")});
+  $$(".dock-rail .rail-btn").forEach(function(b){
+    b.addEventListener("click",function(){app.classList.remove("dock-collapsed")});
+  });
+
+  /* ---- mobile drawers ---- */
+  var sidebar=$("#sidebar"),dock=$("#dock"),overlay=$("#overlay");
+  function closeDrawers(){
+    sidebar.classList.remove("open");dock.classList.remove("open");
+    overlay.classList.remove("show");
+  }
+  $("#openSidebar").addEventListener("click",function(){
+    sidebar.classList.add("open");overlay.classList.add("show");
+  });
+  $("#openDock").addEventListener("click",function(){
+    dock.classList.add("open");overlay.classList.add("show");
+  });
+  $("#closeDock").addEventListener("click",closeDrawers);
+  overlay.addEventListener("click",closeDrawers);
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape"){
+      closeDrawers();
+      $$(".big-show,.picker").forEach(function(x){x.classList.remove("show")});
+    }
+  });
+
+  /* ---- map pins ---- */
+  /* ---- แผนที่จริง (feature 1.2): MapLibre GL + PMTiles ออฟไลน์ — พิกัดจริงจาก poc/pack-src/changsha-mini/poi.json ----
+     ตอนนี้มีแค่ฉางซาเมืองเดียวที่มี .pmtiles จริง (ดู FEATURE-ROADMAP 1.2) เมืองอื่นในทริปยังไม่มีข้อมูลแผนที่จริง */
+  var curPinId="ifs";
+  var pinData={
+    ifs:{ic:"📍",title:"IFS ฉางซา (国金中心)",desc:"แลนด์มาร์กใจกลางเมือง จุดถ่ายรูปหมี KAWS ชั้น 7 · ห่างจากที่พัก 850 ม. เดิน 11 นาที · เปิด 10:00–22:00",lng:112.9793,lat:28.1938},
+    orange:{ic:"🍊",title:"เกาะส้ม (橘子洲)",desc:"เกาะกลางแม่น้ำเซียง จุดชมวิวรูปปั้นเหมาเจ๋อตงหนุ่ม · นั่งรถรางรอบเกาะ ¥40 · เหมาะช่วงเย็นถึงค่ำ",lng:112.96,lat:28.1965},
+    pozi:{ic:"🏮",title:"ถนนโบราณโผจื่อเจีย (坡子街)",desc:"ถนนสายของกินอายุ 1,200 ปี · เต้าหู้เหม็นดำเจ้าดัง Huogongdian · คนแน่นช่วง 18:00 เป็นต้นไป",lng:112.9723,lat:28.1927},
+    yuelu:{ic:"⛰️",title:"เขาเยว่ลู่ (岳麓山)",desc:"จุดชมวิวเมืองฉางซา + วิทยาลัยเยว่ลู่พันปี · กระเช้าขึ้น ¥30 · ใช้เวลาครึ่งวัน แนะนำไปเช้า",lng:112.9316,lat:28.1855},
+    wanlong:{ic:"⛷️",title:"หวันหลง สกีรีสอร์ต (万龙滑雪场)",desc:"หนึ่งในสกีรีสอร์ตแรกๆ ของฉงลี่ · พิกัดยืนยันจาก OpenStreetMap",lng:115.3930784,lat:40.9613283},
+    thaiwoo:{ic:"⛷️",title:"ไท่อู่ สกีรีสอร์ต (太舞滑雪场)",desc:"太舞滑雪小镇 (Thaiwoo) · พิกัดยืนยันจาก OpenStreetMap",lng:115.4366885,lat:40.8833809},
+    yunding:{ic:"⛷️",title:"มี่หย่วน หยุนติ่ง (密苑云顶乐园)",desc:"หรือชื่อ Genting Secret Garden / Yunding Ski Park · พิกัดยืนยันจาก OpenStreetMap",lng:115.4185984,lat:40.9483320}
+  };
+  var cityCenters={
+    "ฉางซา":{lng:pinData.ifs.lng,lat:pinData.ifs.lat,zoom:13},
+    "ฉงลี่":{lng:pinData.yunding.lng,lat:pinData.yunding.lat,zoom:11},
+    "ปักกิ่ง":{lng:116.469,lat:39.883,zoom:10}, // ยังไม่มีหมุด POI คัดสรร แค่แผนที่จริงให้เลื่อนดูได้
+    "เทียนจิน":{lng:117.116,lat:39.409,zoom:10},
+    "จางเจียเจี้ย":{lng:110.4029,lat:29.0163,zoom:12}, // ศูนย์กลางใกล้ Qixingshan (七星山) International Adventure Park
+    "เฟิ่งหวง":{lng:109.595,lat:27.94,zoom:13},
+    "ฝูหรง":{lng:110.0,lat:28.78,zoom:13}
+  };
+  var pinMarkers={};
+  function selectPin(id){
+    curPinId=id;
+    Object.keys(pinMarkers).forEach(function(k){pinMarkers[k].getElement().classList.toggle("selected",k===id)});
+    var d=pinData[id];
+    $("#popTitle").innerHTML="<span>"+d.ic+"</span>"+d.title;
+    $("#popDesc").textContent=d.desc;
+    $("#pinPop").classList.add("show");
+  }
+  var pmProtocol=new pmtiles.Protocol();
+  maplibregl.addProtocol("pmtiles",pmProtocol.tile);
+  var gpMap=new maplibregl.Map({
+    container:"mapCanvas",style:"map-style.json",
+    center:[pinData.ifs.lng,pinData.ifs.lat],zoom:13,
+    attributionControl:{compact:true,customAttribution:"© OpenStreetMap contributors"}
+  });
+  window.gpMap=gpMap; // เปิดให้ debug ผ่าน console ได้ (ไม่กระทบ UX)
+  gpMap.on("error",function(e){console.warn("MapLibre error:",e && e.error && e.error.message,e)});
+  gpMap.on("load",function(){
+    Object.keys(pinData).forEach(function(id){
+      var d=pinData[id];
+      var el=document.createElement("div");
+      el.className="gp-pin"+(id==="ifs"?" selected":"");
+      el.innerHTML='<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="#f59e0b" stroke="#78350f" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>';
+      el.setAttribute("role","button");el.setAttribute("tabindex","0");
+      el.setAttribute("aria-label","หมุด: "+d.title);
+      el.addEventListener("click",function(){selectPin(id)});
+      el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();selectPin(id)}});
+      pinMarkers[id]=new maplibregl.Marker({element:el}).setLngLat([d.lng,d.lat]).addTo(gpMap);
+    });
+  });
+  $("#mapZoomIn").addEventListener("click",function(){gpMap.zoomIn()});
+  $("#mapZoomOut").addEventListener("click",function(){gpMap.zoomOut()});
+  $$(".city-chip").forEach(function(c){
+    c.addEventListener("click",function(){
+      $$(".city-chip").forEach(function(x){x.classList.remove("active")});
+      c.classList.add("active");
+      var msg=$("#cityMsg");
+      var city=cityCenters[c.textContent.trim()];
+      if(city){
+        msg.hidden=true;
+        gpMap.flyTo({center:[city.lng,city.lat],zoom:city.zoom});
+      }else{
+        msg.hidden=false;
+        msg.textContent="⚠️ แผนที่จริงของ"+c.textContent.trim()+"ยังไม่พร้อม — ตอนนี้มีแค่ฉางซา/ฉงลี่/ปักกิ่ง/เทียนจินที่ใช้แผนที่ออฟไลน์จริงได้";
+      }
+    });
+  });
+
+  /* ---- GPS จริง (feature 1.3): ปักหมุด "ฉันอยู่ตรงนี้" บนแผนที่จริงถ้าขอสิทธิ์สำเร็จ
+     geoState/renderStatusChip ประกาศอยู่ถัดไปในไฟล์ (โหมดประหยัดแบต) — อ่านได้ปลอดภัยเพราะ
+     callback ด้านล่างเป็น async ทำงานหลังสคริปต์รันจบรอบแรกเสมอ (hoisting + timing ปกติของ JS) */
+  var userMarker=null,userPos=null;
+  function placeUserMarker(){
+    if(!gpMap||!userPos)return;
+    if(userMarker)userMarker.remove();
+    var el=document.createElement("div");
+    el.className="gp-user-dot";
+    el.setAttribute("aria-label","ตำแหน่งปัจจุบันของฉัน");
+    userMarker=new maplibregl.Marker({element:el}).setLngLat([userPos.lng,userPos.lat]).addTo(gpMap);
+  }
+  if("geolocation" in navigator){
+    navigator.geolocation.getCurrentPosition(function(pos){
+      userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      geoState="ok";renderStatusChip();
+      placeUserMarker();
+    },function(err){
+      geoState=err.code===1?"denied":"unavailable";renderStatusChip();
+    },{timeout:8000,maximumAge:60000});
+  }else{
+    geoState="unavailable";renderStatusChip();
+  }
+  $("#goHome").addEventListener("click",function(){openDriverCard(places[0])});
+
+  /* ---- itinerary data ---- */
+  var days={
+    1:{t:"บินถึงฉางซา ต่อรถไฟเข้าอู่หลิงหยวน",m:"",s:[
+      ["03:00","✈️ CZ3036 BKK → ฉางซา","China Southern ต่อเครื่องกว่างโจว · ถึง CSX 10:50 · เปิด eSIM ตอนลงเครื่อง",["move","เดินทาง"]],
+      ["12:00","🚇 สนามบิน → สถานีฉางซาใต้","Maglev 19 นาที + เผื่อเวลาเข้าสถานีรถไฟ 40 นาที",["move","เดินทาง"],25],
+      ["14:00","🚄 รถไฟ ฉางซาใต้ → จางเจียเจี้ยตะวันตก","~3 ชม. · เสบียงซื้อในสถานี",["move","เดินทาง"],210],
+      ["17:30","🏨 เช็กอิน Shanjian Boutique (อู่หลิงหยวน)","山见精品民宿（武陵源标志门店）· ใกล้ประตูอุทยาน",["move","ที่พัก"]],
+      ["19:00","🍲 หม้อไฟถู่เจียต้อนรับหูหนาน","ร้านแถวที่พัก อุ่นเครื่องรับทริป",["food","อาหาร"],120]
+    ]},
+    2:{t:"สู่เมืองโบราณเฟิ่งหวง",m:"",s:[
+      ["10:00","🚄 Zhangjiajie West → สถานีเฟิ่งหวงกู่เฉิง","รถไฟความเร็วสูง ~50 นาที",["move","เดินทาง"],56],
+      ["12:00","🏨 เช็กอิน Yuanshe Riverview (ริมน้ำ)","宿旅·原舍江景民宿（南华店）· วิวแม่น้ำถัวเจียง",["move","ที่พัก"]],
+      ["14:00","🏮 เดินเมืองเก่า สะพานหงเฉียว","เข้าตัวเมืองฟรี! ตั๋วรวม 9 จุด (บ้านเสิ่นฉงเหวิน+กำแพงเมือง+ล่องเรือ) ¥148",["spot","ที่เที่ยว"],148],
+      ["18:00","🦆 มื้อเย็นของท้องถิ่นเซียงซี","เป็ดเลือดข้าวเหนียว (血粑鸭) + ปลาเปรี้ยวชนเผ่าแม้ว (酸鱼) ร้านแถวถนนริมน้ำมีให้เลือกเยอะ",["food","อาหาร"],90],
+      ["19:30","🌃 ไฟเมืองเก่าริมแม่น้ำถัวเจียง","จุดถ่ายรูปสะท้อนน้ำสวยสุดของทริป — อย่าลืม power bank",["spot","ที่เที่ยว"]]
+    ]},
+    3:{t:"เฟิ่งหวงยามเช้า → ฝูหรงเจิ้น",m:"",s:[
+      ["07:30","🛶 ล่องเรือแม่น้ำถัวเจียงยามเช้า","แสงเช้า + หมอกบนน้ำ คนน้อยกว่ากลางวันมาก",["spot","ที่เที่ยว"],30],
+      ["13:00","🚄 เฟิ่งหวง → สถานีฝูหรงเจิ้น","รถไฟ ~30 นาที",["move","เดินทาง"],22],
+      ["15:00","🏨 เช็กอิน Xuanyuan Courtyard B&B","悬园·观景庭院民宿（芙蓉镇景区店）· วิวน้ำตก",["move","ที่พัก"]],
+      ["16:30","💦 เมืองโบราณบนน้ำตกฝูหรง","เมืองพันปีที่ตั้งอยู่บนน้ำตกจริง ๆ · ตั๋วเข้าเมือง ¥103 (รวมโชว์)",["spot","ที่เที่ยว"],103],
+      ["19:00","🥢 ปาท่องโก๋สายไหม + โชว์ไฟน้ำตก","ของขึ้นชื่อฝูหรง · น้ำตกเปิดไฟยามค่ำสวยมาก",["food","อาหาร"],40]
+    ]},
+    4:{t:"ฝูหรงยามเช้า → กลับจางเจียเจี้ย",m:"",s:[
+      ["08:30","📸 เก็บตกน้ำตกแสงเช้า","มุมสะพานข้ามหุบ ถ่ายทั้งเมือง+น้ำตกเฟรมเดียว",["spot","ที่เที่ยว"]],
+      ["12:30","🚄 ฝูหรงเจิ้น → Zhangjiajie West","รถไฟ ~40 นาที",["move","เดินทาง"],33],
+      ["15:00","🏨 เช็กอิน Xijian Shanyu (หน้าอุทยาน)","喜见·山语酒店（张家界国家森林公园标志门店）",["move","ที่พัก"]],
+      ["16:00","🎫 ซื้อตั๋วอุทยาน 4 วัน + รถราง","¥236 ที่เคาน์เตอร์ (ตั๋ว ¥165 + รถรางในอุทยาน) · สแกนหน้าเข้าได้เลยวันถัดไป",["spot","ที่เที่ยว"],236],
+      ["18:30","🍜 มื้อเย็นหน้าประตูป่าดึกดำบรรพ์","พักผ่อนเร็ว พรุ่งนี้ลุยหนัก",["food","อาหาร"],90]
+    ]},
+    5:{t:"อุทยานจางเจียเจี้ย วันแรก — ฝั่งอวตาร",m:"",s:[
+      ["08:00","⛰️ เข้าประตูอู่หลิงหยวน + ลิฟต์ไป่หลง","ลิฟต์แก้วกลางหน้าผาสูงสุดในโลก",["spot","ที่เที่ยว"],65],
+      ["10:00","🗻 หยวนเจียเจี้ย เสาหินอวตาร","จุดชมวิวเทียนเสี้ยตี้อี้เฉียว (สะพานหินธรรมชาติ)",["spot","ที่เที่ยว"]],
+      ["13:00","🍱 ข้าวกล่องบนเขา","ร้านบนเขาแพง แนะนำเตรียมเสบียงขึ้นไปด้วย",["food","อาหาร"],50],
+      ["19:00","🥘 หม้อไฟสามหินถู่เจีย","ร้านดังในหมู่บ้านอู่หลิงหยวน",["food","อาหาร"],138]
+    ]},
+    6:{t:"อุทยานวันสอง → ย้ายไปเทียนเหมินซาน",m:"",s:[
+      ["08:00","🚠 เทียนจื่อซาน + สวนเฮ่อหลง","กระเช้าขึ้น เดินชมวิวยอดเขา",["spot","ที่เที่ยว"],72],
+      ["11:30","🍜 ข้าวกลางวันแถวประตูอุทยาน","ร้านท้องถิ่นก่อนเดินธาร ราคาย่อมเยากว่าบนเขา",["food","อาหาร"],45],
+      ["12:30","🏞️ ธารทองจินเปียน","เดินเลียบธาร 5.7 กม. ทางเรียบ ผ่อนขา",["spot","ที่เที่ยว"]],
+      ["15:30","🚗 รถไปเมืองจางเจียเจี้ย (ฝั่งเทียนเหมินซาน)","~40 นาที",["move","เดินทาง"],30],
+      ["17:30","🏨 เช็กอิน The Mansion Inn","四大名筑美学客栈（天门山国家森林公园店）",["move","ที่พัก"]],
+      ["19:00","🥘 มื้อเย็นซานเซี่ยกัว (三下锅)","หม้อไฟสไตล์จางเจียเจี้ย เนื้อ+เครื่องในหมู+เต้าหู้ อุ่นท้องก่อนลุยวันถัดไป",["food","อาหาร"],110]
+    ]},
+    7:{t:"เทียนเหมินซาน + Sky Ladder",m:"",s:[
+      ["07:30","🚡 กระเช้าเทียนเหมินซาน","⚠️ เช็กสถานะซ่อมบำรุงก่อนไป (ปิดช่วงกลาง-ยอดเขา ณ ก.ค.69) ยาวสุดในโลก 7.4 กม. · ตั๋วรวม ¥285 · จองรอบเช้าล่วงหน้า",["spot","ที่เที่ยว"],285],
+      ["10:00","🚪 ประตูสวรรค์ + บันได 999 ขั้น (Sky Ladder)","มุมถ่ายรูปไฮไลต์ของทริป",["spot","ที่เที่ยว"]],
+      ["13:00","🌉 ระเบียงกระจกหน้าผา","เสียวสุดในทริป · ค่าถุงผ้าหุ้มรองเท้า",["spot","ที่เที่ยว"],5],
+      ["19:00","🍲 มื้อเย็นเมืองจางเจียเจี้ย","แถวตีนกระเช้า มีร้านให้เลือกเยอะ",["food","อาหาร"],100]
+    ]},
+    8:{t:"เช้าว่าง → กลับฉางซา",m:"",s:[
+      ["09:00","🧺 ตลาดเช้า/เก็บตกเมืองจางเจียเจี้ย","ซื้อของฝากท้องถิ่น ชาถู่เจีย",["spot","ที่เที่ยว"],50],
+      ["13:00","🚄 Zhangjiajie West → ฉางซาใต้","~3 ชม.",["move","เดินทาง"],210],
+      ["16:30","🏨 เช็กอิน Pujing Hotel ฉางซา","长沙璞境酒店 · ติดรถไฟฟ้าสถานี Gaoqiao North",["move","ที่พัก"]],
+      ["19:00","🦞 กุ้งเผายือเหวินเหอโหย่ว","ฉลองกลับเมืองใหญ่ · จองคิวผ่านแอปตอน 17:00",["food","อาหาร"],250]
+    ]},
+    9:{t:"เที่ยวฉางซาเต็มวัน",m:"",s:[
+      ["09:00","🏛️ พิพิธภัณฑ์หูหนาน","จองล่วงหน้า 7 วันผ่านเว็บ/WeChat (เปิดจองรอบใหม่ทุก 20:00) · ชุดไหมมาดามซินจุย",["spot","ที่เที่ยว"]],
+      ["13:00","🍊 เกาะส้ม + รถราง","รถราง ¥40 ไปสุดเกาะ รูปปั้นเหมาเจ๋อตงหนุ่ม",["spot","ที่เที่ยว"],44],
+      ["16:00","🧋 IFS + Sexy Tea","หมี KAWS ชั้น 7 + ชานมแก้วดัง",["spot","ที่เที่ยว"],19],
+      ["18:30","🏮 ถนนโผจื่อเจีย","เต้าหู้เหม็นดำฮั่วกงเตี้ยน + ของกินเล่นยามค่ำ",["food","อาหาร"],80]
+    ]},
+    10:{t:"เก็บตกฉางซา → บินกลับไทย",m:"",s:[
+      ["09:00","🛍️ ช้อปของฝากหวงซิงลู่","ขนม เครื่องเทศ ชา — เผื่อที่ว่างในกระเป๋าไว้ด้วย",["spot","ที่เที่ยว"],150],
+      ["12:00","🥟 มื้อสุดท้าย เส้นหมี่หูหนาน","ปิดทริปด้วยชามที่กินวันแรกไม่ได้ 😄",["food","อาหาร"],13],
+      ["14:30","🚖 ไปสนามบินหวงฮวา T2","เผื่อเวลาถึงก่อนไฟลท์ 2.5 ชม.",["move","เดินทาง"],100],
+      ["18:00","✈️ CZ559 ฉางซา → BKK","ต่อเครื่องกว่างโจว · ถึงไทย 01:30",["move","เดินทาง"]]
+    ]}
+  };
+  var curDay=1;
+  function renderDay(n){
+    curDay=n;
+    var d=days[n];
+    var tl=$("#timeline");
+    if(!d||!d.s||!d.s.length){
+      $("#itinTitle").innerHTML="วัน "+n+" · <em>ยังไม่ได้วางแผน</em>";
+      $("#itinMeta").textContent="แตะ “เพิ่มจุดหมาย” เพื่อเริ่มวางแผน";
+      tl.innerHTML='<div class="stop"><div class="stop-card"><div class="stop-body"><h4>วันนี้ยังว่างอยู่ 🐼</h4><p>ลองถามหลิงหลิงว่า “วัน '+n+' ที่จางเจียเจี้ยควรไปไหนดี” แล้วกดเพิ่มเข้าแผนได้เลย</p></div></div></div>';
+      return;
+    }
+    $("#itinTitle").innerHTML="วัน "+n+" · <em>"+d.t+"</em>";
+    $("#itinMeta").textContent=d.m;
+    tl.innerHTML=d.s.map(function(s){
+      return '<div class="stop"><div class="stop-card">'+
+        '<div class="stop-time num">'+s[0]+'</div>'+
+        '<div class="stop-body"><h4>'+s[1]+'</h4><p>'+s[2]+'</p>'+
+        '<span class="tag '+s[3][0]+'">'+s[3][1]+'</span>'+
+        (s[4]?'<span class="tag cost num">¥'+s[4]+'</span>':'')+'</div></div></div>';
+    }).join("");
+  }
+  renderDay(1);
+  function renderDayStrip(){
+    var html="";
+    for(var n=1;n<=activeTrip.dayCount;n++)
+      html+='<button class="day-chip'+(n===curDay?' active':'')+'" data-day="'+n+'"><b>วัน '+n+'</b>'+(dayDates[n]||"")+'</button>';
+    var strip=$("#dayStrip");
+    strip.innerHTML=html;
+    // ทริปยาว (แถบเลื่อนได้ ~3 จอ) — เลื่อนให้ชิปวันที่เลือกอยู่ใน view เสมอหลัง re-render
+    // ไม่งั้นสลับระหว่างทริปยาวสองทริป scrollLeft ค้างที่เดิมแต่ active กลับไปวัน 1 นอกจอ
+    var act=strip.querySelector(".day-chip.active");
+    if(act)act.scrollIntoView({inline:"center",block:"nearest"});
+  }
+  $("#dayStrip").addEventListener("click",function(e){
+    var c=e.target.closest(".day-chip");if(!c)return;
+    $$(".day-chip",$("#dayStrip")).forEach(function(x){x.classList.remove("active")});
+    c.classList.add("active");
+    renderDay(+c.dataset.day);
+  });
+
+  /* ---- chat: หลิงหลิง Router ชั้น 1 (engine เดียวกับ POC — ตอบจากแพ็กจริง) ---- */
+  var LFAQ=[
+    {id:"csx-faq-0001",p:9,t:["ร้านเช้า","อาหารเช้า","กินเช้า","มื้อเช้า","breakfast"],
+     a:"แนะนำร้านเส้นหมี่เมี่ยนฝู่หูหนานค่ะป๋า เส้นข้าวน้ำซุปกระดูกชามละ ¥13 เปิดตั้งแต่ตี 5 ครึ่ง เดินจากที่พัก 6 นาทีค่ะ"},
+    {id:"csx-faq-0002",p:9,t:["เย็นนี้กิน","มื้อเย็น","ดินเนอร์","กุ้ง","ของกินดัง"],
+     a:"มื้อเย็นต้องเหวินเหอโหย่วค่ะ กุ้งเผายือเจ้าดังของฉางซา คิวยาวมาก กดจองคิวผ่านแอปตั้งแต่ 5 โมงเย็นนะคะ 🦞"},
+    {id:"csx-faq-0003",p:8,pin:"pozi",t:["เต้าหู้เหม็น","สตรีทฟู้ด","ของกินเล่น","ถนนคนเดิน"],
+     a:"ไปถนนโผจื่อเจียเลยค่ะ เต้าหู้เหม็นดำต้องร้านฮั่วกงเตี้ยน คนแน่นหลัง 6 โมงเย็น ระวังกระเป๋าด้วยนะคะ 🏮"},
+    {id:"csx-faq-0004",p:8,pin:"orange",t:["เกาะส้ม","จุดชมวิว","พระอาทิตย์ตก","รูปปั้นเหมา"],
+     a:"เกาะส้มอยู่กลางแม่น้ำเซียงค่ะ นั่งสาย 2 ลง Juzizhou ต่อรถราง ¥40 รอบเกาะ ช่วงเย็นถึงค่ำสวยสุดค่ะ 🍊"},
+    {id:"csx-faq-0005",p:9,t:["ไปจางเจียเจี้ย","รถไฟ","สถานีรถไฟ","ฉางซาใต้"],
+     a:"นั่งรถไฟความเร็วสูงจากฉางซาใต้ไปจางเจียเจี้ยตะวันตก ~3 ชม. ค่ะ วันแรก (12 ก.ย.) ลงเครื่อง 10:50 แล้วต่อรถไฟช่วงบ่ายพอดี เผื่อเวลาเข้าสถานี 40 นาทีนะคะ 🚄"},
+    {id:"csx-faq-0006",p:7,t:["พิพิธภัณฑ์","มาดามซินจุย","ชุดไหม"],
+     a:"พิพิธภัณฑ์หูหนานเข้าฟรีค่ะ แต่ต้องจองล่วงหน้า 7 วันผ่านเว็บ/WeChat (เปิดจองรอบใหม่ทุกวัน 20:00) ⚠️ ปิดทุกวันจันทร์ — แผนเราวางไว้วันอาทิตย์ที่ 20 ก.ย. (วัน 9) พอดี เลี่ยงได้สวย ๆ ค่ะ"},
+    {id:"csx-faq-0007",p:10,phrase:["ไม่เอาเผ็ด","不要辣","bú yào là","ปู๋ เหย้า ล่า"],t:["ไม่เผ็ด","ขอไม่เผ็ด","ไม่กินเผ็ด"],
+     a:"พูดว่า “ปู๋ เหย้า ล่า” (不要辣) ค่ะ — ขยายตัวใหญ่ให้โชว์แม่ค้าแล้วนะคะ 🌶️🚫"},
+    {id:"csx-faq-0008",p:8,pin:"ifs",t:["จุดถ่ายรูป","หมี kaws","ตึก ifs","แลนด์มาร์ก","ifs"],
+     a:"IFS ฉางซาค่ะ ชั้น 7 มีหมี KAWS บนดาดฟ้า แสงสวยสุดช่วงเย็น ปักหมุดบนแผนที่ให้แล้วค่ะ 🧸"},
+    {id:"csx-faq-0009",p:7,pin:"yuelu",t:["เขาเยว่ลู่","ภูเขา","กระเช้า"],
+     a:"เขาเยว่ลู่ค่ะ ขาขึ้นนั่งกระเช้า ¥30 เก็บแรงไว้เดินชมวิทยาลัยเยว่ลู่พันปี ไปเช้าหมอกสวยค่ะ ⛰️"},
+    {id:"fh-faq-0001",p:9,t:["เฟิ่งหวง","เมืองโบราณ","ล่องเรือถัวเจียง","ถัวเจียง"],
+     a:"เมืองโบราณเฟิ่งหวงค่ะ เข้าตัวเมืองฟรี! ถ้าอยากเข้าจุดสำคัญ (บ้านเสิ่นฉงเหวิน+ล่องเรือ+อื่นๆ) ซื้อตั๋วรวม ¥148 ค่ะ แนะนำล่องเรือเช้าตรู่คนน้อยหมอกสวย ตอนค่ำไฟเมืองเก่าสะท้อนน้ำคือไฮไลต์ 🏮"},
+    {id:"fr-faq-0001",p:9,t:["ฝูหรง","น้ำตก","หมี่โต้วฝู่","ปาท่องโก๋"],
+     a:"ฝูหรงเจิ้นคือเมืองพันปีที่ตั้งอยู่บนน้ำตกจริง ๆ ค่ะ ตั๋วเข้าเมือง ¥103 (รวมโชว์แล้ว) อย่าพลาดหมี่โต้วฝู่ร้านดังกับโชว์ไฟน้ำตกยามค่ำนะคะ 💦"},
+    {id:"tms-faq-0001",p:9,t:["เทียนเหมินซาน","กระเช้า","ประตูสวรรค์","บันได 999","sky ladder"],
+     a:"เทียนเหมินซานค่ะ ⚠️ ช่วงนี้กระเช้ากลาง-ยอดเขากำลังปิดซ่อม ต้องเช็กสถานะใกล้วันเดินทางอีกทีนะคะ ราคาปกติตั๋วรวม ¥285 ต้องจองรอบล่วงหน้า คิวหน้างานยาวมากค่ะ 🚡"},
+    {id:"zjj-faq-0001",p:8,t:["ไปเฟิ่งหวง","ไปฝูหรง","จางเจียเจี้ยตะวันตก","ต่อรถไฟ"],
+     a:"ใช้สถานีจางเจียเจี้ยตะวันตกเป็นฮับค่ะ รถไฟไปเฟิ่งหวง ~50 นาที · ฝูหรง ~40 นาที · กลับฉางซาใต้ ~3 ชม.ค่ะ 🚄"}
+  ];
+  function tier1(q){
+    var n=q.toLowerCase(),best=null,bs=0;
+    LFAQ.forEach(function(f){
+      var hits=f.t.filter(function(t){return n.includes(t.toLowerCase())}).length;
+      var s=hits*10+(f.p||0);
+      if(hits>0&&s>bs){best=f;bs=s}
+    });
+    return best;
+  }
+  function sendChat(text){
+    var box=$("#chatMsgs");
+    var mine=document.createElement("div");
+    mine.className="msg me";mine.textContent=text;box.appendChild(mine);
+    box.scrollTop=box.scrollHeight;
+    setTimeout(function(){
+      var f=tier1(text);
+      var ai=document.createElement("div");
+      ai.className="msg ai";
+      var src='<small style="display:block;color:var(--faint);font-size:.62rem;margin-top:4px">';
+      if(f){
+        ai.innerHTML=f.a+src+'ตอบโดย Router ชั้น 1 · '+f.id+' · ออฟไลน์ 100%</small>';
+        if(f.pin){
+          var pinEl=document.querySelector('.map-pin[data-pin="'+f.pin+'"]');
+          if(pinEl){showView("map");pinEl.dispatchEvent(new Event("click"))}
+        }
+        if(f.phrase)openBig(f.phrase);
+      }else{
+        ai.innerHTML='คำถามนี้เกินข้อมูลในแพ็กค่ะ (แอปจริงจะส่งต่อชั้น 2/3) — หลิงหลิงจดคิวไว้ถามตอนเจอเน็ตแล้วนะคะ 📥'+src+'Router: queued · รอออนไลน์</small>';
+      }
+      box.appendChild(ai);box.scrollTop=box.scrollHeight;
+    },600);
+  }
+  $("#chatSend").addEventListener("click",function(){
+    var v=$("#chatBox").value.trim();
+    if(v){sendChat(v);$("#chatBox").value=""}
+  });
+  $("#chatBox").addEventListener("keydown",function(e){
+    if(e.key==="Enter"){var v=e.target.value.trim();if(v){sendChat(v);e.target.value=""}}
+  });
+  $$(".chips button").forEach(function(b){
+    b.addEventListener("click",function(){sendChat(b.dataset.q)});
+  });
+
+  /* ---- currency ---- */
+  var RATE=4.86,cny=$("#fxCny"),thb=$("#fxThb");
+  function fmt(n){return (Math.round(n*100)/100).toString()}
+  cny.addEventListener("input",function(){thb.value=cny.value===""?"":fmt(cny.value*RATE)});
+  thb.addEventListener("input",function(){cny.value=thb.value===""?"":fmt(thb.value/RATE)});
+  $("#fxSwap").addEventListener("click",function(){
+    var a=cny.value;cny.value=thb.value===""?"":fmt(thb.value/RATE);thb.value=a===""?"":fmt(a*RATE);
+    cny.dispatchEvent(new Event("input"));
+  });
+  $$("#presets .preset").forEach(function(p){
+    p.addEventListener("click",function(){
+      cny.value=p.dataset.cny;thb.value=fmt(p.dataset.cny*RATE);
+    });
+  });
+
+  /* ---- แปลงราคา = จดบัญชีเลย (feature 1.6) + สมุดบันทึกผูกกับระบบหลายทริปจริง (feature 1.4)
+     journalState เป็นของทริปที่กำลังเปิดอยู่เท่านั้น — สลับ/สร้าง/นำเข้าทริปแล้วจะสลับชุดนี้ตาม (ดู switchToLiveData) */
+  function defaultJournalEntries(){
+    // ของเดิมที่เคย hardcode ไว้เป็นดีโมทริปหูหนาน — ใช้เป็นค่าเริ่มต้นของทริป "default" เท่านั้น
+    return [
+      {ic:"🦞",title:"กุ้งเผายือฉางซา ถนนโผจื่อเจีย",cat:"อาหาร · เผ็ดจริงตามคำร่ำลือ 🌶️",time:"19:20",cny:128},
+      {ic:"🎫",title:"ตั๋วรถรางเกาะส้ม + จุดชมวิวเหมาเจ๋อตง",cat:"ตั๋วเข้าชม · จองผ่าน mini-program",time:"14:00",cny:40},
+      {ic:"🧋",title:"ชานมกล้วยไม้ Sexy Tea (茶颜悦色)",cat:"อาหาร · ต่อคิว 20 นาที คุ้ม!",time:"11:30",cny:19},
+      {ic:"🚇",title:"รถไฟฟ้าสาย 2 → สถานี Wuyi Square",cat:"เดินทาง · บัตรเที่ยว 1 วัน",time:"09:10",cny:4},
+      {ic:"🥟",title:"เสี่ยวหลงเปา + โจวร้อน ร้านหน้าโรงแรม",cat:"อาหาร · จ่ายด้วย Alipay",time:"07:45",cny:28},
+      {ic:"📊",title:"ยอดสะสมวันที่ 1-8 (ก่อนเริ่มบันทึกละเอียด)",cat:"สรุป",time:"",cny:1067}
+    ];
+  }
+  var journalState={spent:1286,entries:defaultJournalEntries()}; // ค่าเริ่มต้น = ดีโมทริปหูหนาน สลับทริปแล้วจะถูกแทนที่
+  function renderJournalSummary(){
+    var total=journalState.spent,budget=activeTrip.budget||0,days=activeTrip.dayCount||1;
+    $("#jTotalSpent").textContent="¥"+fmt(total);
+    $("#jTotalSub").textContent="≈ ฿"+fmt(total*RATE)+" · "+days+" วัน";
+    $("#jRemaining").textContent=budget>0?"¥"+fmt(budget-total):"—";
+    $("#jRemainingSub").textContent=budget>0?"จากงบ ¥"+fmt(budget):"ยังไม่ได้ตั้งงบ";
+    $("#jAvgPerDay").textContent="¥"+fmt(total/days);
+  }
+  function renderJournalEntries(){
+    $("#expListSaved").innerHTML=journalState.entries.map(function(e){
+      return '<div class="exp"><div class="exp-ic">'+e.ic+'</div><div class="exp-body"><h5>'+e.title+'</h5>'+
+        '<span>'+(e.time?e.time+" · ":"")+e.cat+'</span></div><div class="exp-amt num"><b>¥'+fmt(e.cny)+'</b><span>≈ ฿'+fmt(e.cny*RATE)+'</span></div></div>';
+    }).join("")||'<div class="sub2">ยังไม่มีรายการ — กดบันทึกจากกล่องแลกเงิน หรือ "＋ จดรายการใหม่" ได้เลย</div>';
+  }
+  $("#fxSaveExpense").addEventListener("click",function(){
+    var amt=parseFloat(cny.value);
+    if(!amt||amt<=0){cny.focus();return}
+    amt=Math.round(amt*100)/100;
+    journalState.entries.unshift({ic:"💱",title:"แลกเงินเป็นรายจ่าย",cat:"แลกเงิน",
+      time:new Date().toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"}),cny:amt});
+    journalState.spent=Math.round((journalState.spent+amt)*100)/100;
+    persistCurrentTrip();
+    renderJournalSummary();renderJournalEntries();
+    var msg=$("#fxSaveMsg");
+    msg.textContent="✓ บันทึก ¥"+fmt(amt)+" ลงสมุดบันทึกแล้ว";
+    msg.hidden=false;
+    setTimeout(function(){msg.hidden=true},3500);
+  });
+
+  /* ---- city packs ---- */
+  var packs=[
+    {id:"cs",flag:"🌶️",n:"ฉางซา",cn:"长沙",size:214,st:"ok",note:"อัปเดต 16 ก.ค.",parts:["แผนที่","POI 1,240 จุด","รถไฟฟ้า","เมนูร้านดัง"],trip:1},
+    {id:"zjj",flag:"⛰️",n:"จางเจียเจี้ย",cn:"张家界",size:186,st:"ok",note:"อัปเดต 16 ก.ค.",parts:["แผนที่","เส้นเทรลอุทยาน","กระเช้า/รถบัส"],trip:1},
+    {id:"fh",flag:"🏮",n:"เฟิ่งหวง",cn:"凤凰古城",size:96,st:"none",note:"",parts:["แผนที่เมืองเก่า","POI 320 จุด","ล่องเรือ/ตั๋ว"],trip:1},
+    {id:"fr",flag:"💦",n:"ฝูหรงเจิ้น",cn:"芙蓉镇",size:64,st:"none",note:"",parts:["แผนที่","POI 180 จุด","น้ำตก/โชว์ไฟ"],trip:1},
+    {id:"tms",flag:"🚡",n:"เทียนเหมินซาน",cn:"天门山",size:88,st:"ok",note:"อัปเดต 18 ก.ค.",parts:["แผนที่","กระเช้า/บันได 999","ระเบียงกระจก"],trip:1},
+    {id:"bj",flag:"🏮",n:"ปักกิ่ง",cn:"北京",size:412,st:"none",note:"",parts:["แผนที่","POI 2,900 จุด","รถไฟฟ้า 27 สาย"],trip:0},
+    {id:"sh",flag:"🌃",n:"เซี่ยงไฮ้",cn:"上海",size:386,st:"none",note:"",parts:["แผนที่","POI 2,400 จุด","รถไฟฟ้า"],trip:0},
+    {id:"cd",flag:"🐼",n:"เฉิงตู",cn:"成都",size:298,st:"none",note:"",parts:["แผนที่","POI 1,700 จุด","ศูนย์วิจัยแพนด้า"],trip:0}
+  ];
+  function packHtml(p){
+    var badge=p.st==="ok"?'<span class="pk-badge ok">✓ ติดตั้งแล้ว</span>'
+      :p.st==="update"?'<span class="pk-badge update">มีอัปเดต</span>'
+      :p.st==="dl"?'<span class="pk-badge update">กำลังโหลด…</span>'
+      :'<span class="pk-badge none">ยังไม่ได้โหลด</span>';
+    var foot;
+    if(p.st==="dl"){
+      foot='<div class="pack-bar"><i style="width:'+p.pct+'%"></i></div><span class="pct num">'+p.pct+'%</span>';
+    }else{
+      var btn=p.st==="ok"?'<button class="btn-ghost" data-act="del" data-id="'+p.id+'">ลบ</button>'
+        :p.st==="update"?'<button class="btn-gold" data-act="dl" data-id="'+p.id+'">อัปเดต</button>'
+        :'<button class="btn-gold" data-act="dl" data-id="'+p.id+'">⬇ ดาวน์โหลด</button>';
+      foot='<span class="pack-size num">'+p.size+' MB'+(p.note?' · '+p.note:'')+'</span>'+btn;
+    }
+    return '<div class="pack" id="pack-'+p.id+'">'+
+      '<div class="pack-top"><div class="pack-flag">'+p.flag+'</div><h4>'+p.n+'<small>'+p.cn+'</small></h4>'+badge+'</div>'+
+      '<div class="pack-chips">'+p.parts.map(function(x){return '<span>'+x+'</span>'}).join('')+'</div>'+
+      '<div class="pack-foot">'+foot+'</div></div>';
+  }
+  function renderPacks(){
+    $("#packGridTrip").innerHTML=packs.filter(function(p){return p.trip}).map(packHtml).join("");
+    $("#packGridMore").innerHTML=packs.filter(function(p){return !p.trip}).map(packHtml).join("");
+    var used=0,cnt=0;
+    packs.forEach(function(p){if(p.st!=="none"&&p.st!=="dl"){used+=p.size;cnt++}});
+    $("#storeUsed").textContent=used+" MB";
+    $("#storeFill").style.width=Math.min(100,used/2048*100)+"%";
+    $("#packCount").textContent=cnt+" เมือง";
+  }
+  $("#view-packs").addEventListener("click",function(e){
+    var b=e.target.closest("[data-act]");if(!b)return;
+    var p=packs.filter(function(x){return x.id===b.dataset.id})[0];
+    if(b.dataset.act==="del"){p.st="none";p.note="";renderPacks();return}
+    var isUpd=p.st==="update";
+    p.st="dl";p.pct=0;renderPacks();
+    var t=setInterval(function(){
+      p.pct=Math.min(100,p.pct+(isUpd?16:6)+Math.floor(Math.random()*6));
+      var el=$("#pack-"+p.id);
+      if(el){el.querySelector(".pack-bar i").style.width=p.pct+"%";el.querySelector(".pct").textContent=p.pct+"%"}
+      if(p.pct>=100){clearInterval(t);p.st="ok";p.note="เพิ่งดาวน์โหลด";renderPacks()}
+    },220);
+  });
+  renderPacks();
+
+  /* ---- phrases ---- */
+  var phCats=[["sos","🚨 ฉุกเฉิน"],["food","🍜 ร้านอาหาร"],["move","🚇 เดินทาง"],["shop","🛍️ ช้อปปิ้ง"],["hotel","🏨 โรงแรม"]];
+  var phrases={
+    sos:[
+      ["ช่วยด้วย!","救命!","jiù mìng","จิ้ว-มิ่ง"],
+      ["เรียกตำรวจให้หน่อย","请帮我叫警察","qǐng bāng wǒ jiào jǐngchá","ฉิ่ง ปัง หว่อ เจี้ยว จิ่ง-ฉา"],
+      ["ฉันต้องไปโรงพยาบาล","我要去医院","wǒ yào qù yīyuàn","หว่อ เหย้า ชวี่ อี-ย่วน"],
+      ["ฉันแพ้อาหารทะเล","我对海鲜过敏","wǒ duì hǎixiān guòmǐn","หว่อ ตุ้ย ไห่-เซียน กั้ว-หมิ่น"],
+      ["กระเป๋าเงินหาย","我的钱包丢了","wǒ de qiánbāo diū le","หว่อ เตอ เฉียน-เปา ติว เลอ"],
+      ["ฉันหลงทาง ช่วยหน่อย","我迷路了，请帮帮我","wǒ mílù le, qǐng bāngbang wǒ","หว่อ หมี-ลู่ เลอ, ฉิ่ง ปัง-ปัง หว่อ"]
+    ],
+    food:[
+      ["ไม่เอาเผ็ด","不要辣","bú yào là","ปู๋ เหย้า ล่า"],
+      ["ไม่ใส่ผักชี","不要香菜","bú yào xiāngcài","ปู๋ เหย้า เซียง-ไช่"],
+      ["เอาอันนี้ 1 ที่","要这个，一份","yào zhège, yí fèn","เหย้า เจ้อ-เก้อ, อี๋ เฟิ่น"],
+      ["ขอน้ำเปล่าเย็น 1 ขวด","要一瓶冰水","yào yì píng bīng shuǐ","เหย้า อี้ ผิง ปิง สุ่ย"],
+      ["เช็กบิล","买单","mǎi dān","หม่าย-ตัน"],
+      ["อร่อยมาก!","很好吃!","hěn hǎochī","เหิ่น ห่าว-ชือ"]
+    ],
+    move:[
+      ["สถานีรถไฟฟ้าอยู่ทางไหน","地铁站在哪里","dìtiě zhàn zài nǎlǐ","ตี้-เถี่ย จ้าน ไจ้ หนา-หลี่"],
+      ["พาไปที่นี่ (โชว์ที่อยู่)","请带我去这里","qǐng dài wǒ qù zhèlǐ","ฉิ่ง ไต้ หว่อ ชวี่ เจ้อ-หลี่"],
+      ["จอดตรงนี้ได้เลย","停这里就可以","tíng zhèlǐ jiù kěyǐ","ถิง เจ้อ-หลี่ จิ้ว เข่อ-อี่"],
+      ["ห้องน้ำอยู่ไหน","洗手间在哪里","xǐshǒujiān zài nǎlǐ","สี-โส่ว-เจียน ไจ้ หนา-หลี่"],
+      ["ไปสนามบินใช้เวลานานไหม","去机场要多久","qù jīchǎng yào duōjiǔ","ชวี่ จี-ฉ่าง เหย้า ตัว-จิ่ว"]
+    ],
+    shop:[
+      ["ราคาเท่าไหร่","多少钱","duōshǎo qián","ตัว-เส่า เฉียน"],
+      ["ลดหน่อยได้ไหม","便宜一点可以吗","piányí yìdiǎn kěyǐ ma","เผียน-อี๋ อี้-เตี่ยน เข่อ-อี่ มา"],
+      ["แพงไปหน่อย","太贵了","tài guì le","ไท่ กุ้ย เลอ"],
+      ["สแกนจ่ายได้ไหม","可以扫码吗","kěyǐ sǎo mǎ ma","เข่อ-อี่ เส่า หม่า มา"],
+      ["ขอถุงใบนึง","要一个袋子","yào yí ge dàizi","เหย้า อี๋ เกอ ไต้-จึ"]
+    ],
+    hotel:[
+      ["เช็กอิน จองในชื่อ…","办理入住，名字是…","bànlǐ rùzhù, míngzi shì…","ปั้น-หลี่ รู่-จู้, หมิง-จึ ชื่อ…"],
+      ["ขอรหัส Wi-Fi หน่อย","Wi-Fi密码是多少","Wi-Fi mìmǎ shì duōshǎo","วาย-ฟาย มี่-หม่า ชื่อ ตัว-เส่า"],
+      ["ฝากกระเป๋าได้ไหม","可以寄存行李吗","kěyǐ jìcún xínglǐ ma","เข่อ-อี่ จี้-ฉุน สิง-หลี่ มา"],
+      ["แอร์เสีย ช่วยดูหน่อย","空调坏了","kōngtiáo huài le","คง-เถียว ไฮว่ เลอ"],
+      ["เช็กเอาต์ ขอบคุณครับ/ค่ะ","退房，谢谢","tuì fáng, xièxie","ทุ่ย ฝัง, เซี่ย-เซี่ย"]
+    ]
+  };
+  var curCat="sos";
+  function renderPhrases(){
+    $("#phCats").innerHTML=phCats.map(function(c){
+      return '<button class="cat-chip'+(c[0]===curCat?' active':'')+'" data-cat="'+c[0]+'" role="tab" aria-selected="'+(c[0]===curCat)+'">'+c[1]+'</button>';
+    }).join("");
+    $("#phGrid").innerHTML=phrases[curCat].map(function(p,i){
+      return '<div class="ph-card" data-i="'+i+'" tabindex="0" role="button" aria-label="'+p[0]+'">'+
+        '<button class="ph-speak" data-i="'+i+'" aria-label="อ่านออกเสียง: '+p[0]+'">🔊</button>'+
+        '<span class="th">'+p[0]+'</span><span class="cn">'+p[1]+'</span>'+
+        '<span class="py">'+p[2]+'</span><span class="pron">อ่านว่า: '+p[3]+'</span>'+
+        '<span class="ph-hint">แตะเพื่อขยายโชว์ให้คนจีนอ่าน ↗</span></div>';
+    }).join("");
+  }
+  /* ---- เสียงพูดภาษาจีน (feature 1.5): ใช้ไฟล์เสียงจริงที่อัดไว้ล่วงหน้าก่อน (ไม่พึ่ง voice ของเครื่อง)
+     ตกไป speechSynthesis เฉพาะประโยคที่ไม่มีไฟล์ (เช่น ประโยคคนขับที่ประกอบชื่อสถานที่แบบไดนามิก) */
+  var phraseAudioMap=(function(){
+    var map={};
+    phCats.forEach(function(c){
+      (phrases[c[0]]||[]).forEach(function(p,i){map[p[1]]="audio/phrases/"+c[0]+"-"+i+".mp3"});
+    });
+    return map;
+  })();
+  var curPhraseAudio=null;
+  function speakCn(txt){
+    if(curPhraseAudio){curPhraseAudio.pause();curPhraseAudio=null}
+    var file=phraseAudioMap[txt];
+    if(file){curPhraseAudio=new Audio(file);curPhraseAudio.play();return}
+    if(!window.speechSynthesis)return;
+    var u=new SpeechSynthesisUtterance(txt);u.lang="zh-CN";u.rate=.85;
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }
+  var bigShow=$("#bigShow");
+  function openBig(p){
+    $("#bigCn").textContent=p[1];$("#bigPy").textContent=p[2];
+    $("#bigTh").textContent=p[0]+" · อ่านว่า "+p[3];
+    bigShow.classList.add("show");
+  }
+  $("#view-phrases").addEventListener("click",function(e){
+    var chip=e.target.closest(".cat-chip");
+    if(chip){curCat=chip.dataset.cat;renderPhrases();return}
+    var sp=e.target.closest(".ph-speak");
+    if(sp){speakCn(phrases[curCat][+sp.dataset.i][1]);return}
+    var card=e.target.closest(".ph-card");
+    if(card)openBig(phrases[curCat][+card.dataset.i]);
+  });
+  $("#view-phrases").addEventListener("keydown",function(e){
+    var card=e.target.closest(".ph-card");
+    if(card&&(e.key==="Enter"||e.key===" ")){e.preventDefault();openBig(phrases[curCat][+card.dataset.i])}
+  });
+  bigShow.addEventListener("click",function(e){
+    if(e.target.closest("#bigSpeak"))return;
+    bigShow.classList.remove("show");
+  });
+  $("#bigSpeak").addEventListener("click",function(e){
+    e.stopPropagation();speakCn($("#bigCn").textContent);
+  });
+  renderPhrases();
+
+  /* ---- ready checklist ---- */
+  // ทริปที่สร้าง/นำเข้าใหม่ยังไม่มีเช็กลิสต์เฉพาะเมือง — ใช้ชุดนี้เป็นค่าเริ่มต้นทั่วไปไปก่อน (ดู switchToLiveData)
+  function defaultChecklist(){return [
+    {cat:"เอกสาร",ic:"🛂",items:[
+      {t:"พาสปอร์ตเหลืออายุเกิน 6 เดือน",n:"หมดอายุ มี.ค. 2572 — ผ่าน",done:1},
+      {t:"เช็กเงื่อนไขฟรีวีซ่าจีน 30 วัน",n:"ไทย–จีน ฟรีวีซ่าถาวร ไม่ต้องยื่นเอกสาร",done:1},
+      {t:"พิมพ์ใบจองโรงแรม + ตั๋วรถไฟ",n:"เผื่อ ตม. ถาม · เก็บไฟล์ไว้ในแอปแล้วด้วย",done:1},
+      {t:"ซื้อประกันเดินทาง",n:"คุ้มครองสุขภาพ + เที่ยวบินดีเลย์",done:0,due:"ก่อนบิน 7 วัน",act:{kind:"aff",label:"🛡️ เทียบประกัน ↗",href:"https://www.axa.co.th/travel-insurance"}},
+      {t:"จองตั๋วเดินทาง/เข้าชมล่วงหน้า",n:"เครื่องบิน รถไฟ ตั๋วอุทยาน — จองผ่าน Booking Hub ในโต๊ะวางแผนได้เลย",done:0,due:"ก่อนบิน 5 วัน",act:{kind:"view",view:"plan",label:"🎟️ ไปจองเลย"}}
+    ]},
+    {cat:"การเงิน",ic:"💰",items:[
+      {t:"เปิด Alipay ผูกบัตรเครดิต",n:"ใช้จ่ายหลักที่จีน สแกน QR ได้ทุกร้าน",done:1},
+      {t:"เปิด WeChat Pay สำรอง",n:"บางร้านเล็กรับแต่ WeChat",done:1},
+      {t:"แลกเงินสด CNY สำรอง",n:"แนะนำ ¥1,000 ติดตัว เผื่อร้านไม่รับสแกน",done:0,due:"ก่อนบิน 3 วัน",act:{kind:"aff",label:"📈 เช็กเรทวันนี้ ↗",href:"https://www.superrichthailand.com"}},
+      {t:"แจ้งธนาคารใช้บัตรที่ต่างประเทศ",n:"กันบัตรโดนล็อกตอนรูดที่จีน",done:1}
+    ]},
+    {cat:"ดิจิทัล",ic:"📱",items:[
+      {t:"โหลดแผนที่ฉางซา + จางเจียเจี้ย + เทียนเหมินซาน",n:"เสร็จแล้ว 460 MB ใช้ออฟไลน์ได้",done:1},
+      {t:"โหลดแผนที่เฟิ่งหวง + ฝูหรง",n:"ไปหน้าแพ็กข้อมูลเมือง → กดดาวน์โหลด",done:0,due:"ก่อนบิน 1 วัน",act:{kind:"view",view:"packs",label:"📦 ไปโหลดเลย"}},
+      {t:"ซื้อ eSIM จีน 15GB",n:"เปิดใช้เมื่อลงเครื่อง ไม่ต้องเปลี่ยนซิม",done:1,act:{kind:"aff",label:"📶 ซื้อ eSIM ↗",href:"https://www.klook.com/th/search/result/?query=china+esim&aid=YOUR_AID"}},
+      {t:"ติดตั้ง VPN",n:"สำหรับใช้ LINE / Google / Facebook ที่จีน",done:1},
+      {t:"โหลดวลีจีน + เสียงอ่านออฟไลน์",n:"อยู่ในแอปครบแล้ว 5 หมวด",done:1}
+    ]},
+    {cat:"สัมภาระ",ic:"🎒",items:[
+      {t:"ปลั๊กแปลง Type A/C/I",n:"จีนใช้ 220V ขาแบนเหมือนไทยเป็นส่วนใหญ่",done:1},
+      {t:"จัดยาประจำตัว + ยาสามัญ",n:"ยาแก้แพ้ ยาแก้ท้องเสีย พลาสเตอร์",done:0,due:"ก่อนบิน 2 วัน"},
+      {t:"เสื้อกันฝน / ร่มพับ",n:"กลาง ก.ย. หูหนานยังมีฝน + หมอกบนเขาหนา",done:1},
+      {t:"รองเท้าเดินเขา",n:"จางเจียเจี้ยเดินวันละ 15,000+ ก้าว",done:1},
+      {t:"Power bank ไม่เกิน 20,000 mAh",n:"เกินนี้ขึ้นเครื่องไม่ได้",done:1}
+    ]}
+  ]}
+  var checklist=defaultChecklist();
+  var RING_C=326.7;
+  function renderChecklist(){
+    $("#clGrid").innerHTML=checklist.map(function(c,ci){
+      var done=c.items.filter(function(i){return i.done}).length;
+      return '<div class="cl-card">'+
+        '<div class="cl-head"><span>'+c.ic+'</span><h4>'+c.cat+'</h4>'+
+        '<span class="cnt num'+(done===c.items.length?' full':'')+'">'+done+'/'+c.items.length+(done===c.items.length?' ✓':'')+'</span></div>'+
+        c.items.map(function(it,ii){
+          return '<div class="cl-item'+(it.done?' done':'')+'" data-ci="'+ci+'" data-ii="'+ii+'" role="checkbox" aria-checked="'+(!!it.done)+'" tabindex="0">'+
+            '<span class="cl-check">'+(it.done?'✓':'')+'</span>'+
+            '<div class="cl-body"><div class="cl-t">'+it.t+'</div><div class="cl-n">'+it.n+'</div></div>'+
+            (it.act&&!it.done?(it.act.kind==="view"
+              ?'<button class="cl-act" data-view-link="'+it.act.view+'">'+it.act.label+'</button>'
+              :'<a class="cl-act aff" target="_blank" rel="noopener sponsored" href="'+it.act.href+'">'+it.act.label+'</a>'):'')+
+            (it.due&&!it.done?'<span class="cl-due">'+it.due+'</span>':'')+
+            '</div>';
+        }).join("")+'</div>';
+    }).join("");
+  }
+  function updateReady(){
+    var total=0,done=0,pending=[];
+    checklist.forEach(function(c){c.items.forEach(function(i){
+      total++;if(i.done)done++;else pending.push(i.t);
+    })});
+    var pct=Math.round(done/total*100);
+    $("#readyPct").textContent=pct+"%";
+    $("#ringPct").textContent=pct+"%";
+    $("#ringDone").textContent=done+"/"+total;
+    $("#readyFill").style.width=pct+"%";
+    $("#readyBar").setAttribute("aria-valuenow",pct);
+    $("#ringFg").style.strokeDashoffset=RING_C*(1-pct/100);
+    $("#ringMsg").textContent=pct>=100?"พร้อมบินเต็มร้อย! 🎉":pct>=75?"เกือบพร้อมแล้ว 🐼":pct>=50?"ไปได้ครึ่งทางแล้ว":"เริ่มเตรียมตัวกันเถอะ";
+    $("#readyHint").textContent=pending.length===0?"ครบทุกรายการ พร้อมออกเดินทาง! 🎉"
+      :"เหลือ: "+pending.slice(0,2).join(" · ")+(pending.length>2?" +อีก "+(pending.length-2):"");
+    var ins=checklist[0].items[3],strip=$("#sosInsurance");
+    if(strip){
+      strip.className="ins-strip"+(ins.done?" ok":"");
+      strip.innerHTML=ins.done
+        ?"🛡️ ประกันเดินทาง: <b>คุ้มครองแล้ว</b> · กรมธรรม์ TR-889-004512 · เคลมโทร 02-123-4567 กด 2 (ภาษาไทย)"
+        :"⚠️ <b>ยังไม่ได้ซื้อประกันเดินทาง</b> — แตะเพื่อไปติ๊กในเช็กลิสต์ก่อนบิน (แนะนำซื้อก่อนบิน 7 วัน)";
+    }
+  }
+  function toggleItem(el){
+    var it=checklist[+el.dataset.ci].items[+el.dataset.ii];
+    it.done=it.done?0:1;
+    renderChecklist();updateReady();persistCurrentTrip();
+  }
+  $("#clGrid").addEventListener("click",function(e){
+    var vl=e.target.closest("[data-view-link]");
+    if(vl){showView(vl.dataset.viewLink);return}
+    if(e.target.closest(".cl-act"))return;
+    var el=e.target.closest(".cl-item");if(el)toggleItem(el);
+  });
+  $("#clGrid").addEventListener("keydown",function(e){
+    var el=e.target.closest(".cl-item");
+    if(el&&(e.key==="Enter"||e.key===" ")){e.preventDefault();toggleItem(el)}
+  });
+  renderChecklist();updateReady();
+
+  /* ---- driver card & saved places ---- */
+  var places=[
+    {ic:"🏨",th:"ที่พักคืน 1 · Shanjian Boutique (อู่หลิงหยวน)",cn:"张家界山见精品民宿（武陵源标志门店）",addr:"武陵源区标志门附近",py:"Shānjiàn Mínsù",tel:""},
+    {ic:"🏮",th:"ที่พักคืน 2 · Yuanshe Riverview (เฟิ่งหวง)",cn:"宿旅·原舍江景民宿（凤凰南华店）",addr:"凤凰古城南华门附近",py:"Yuánshè Mínsù",tel:""},
+    {ic:"💦",th:"ที่พักคืน 3 · Xuanyuan Courtyard (ฝูหรง)",cn:"悬园·观景庭院民宿（芙蓉镇景区店）",addr:"永顺县芙蓉镇景区",py:"Xuányuán Mínsù",tel:""},
+    {ic:"⛰️",th:"ที่พักคืน 4-5 · Xijian Shanyu (หน้าอุทยาน)",cn:"喜见·山语酒店（张家界国家森林公园标志门店）",addr:"武陵源区森林公园标志门",py:"Xǐjiàn Shānyǔ",tel:""},
+    {ic:"🚡",th:"ที่พักคืน 6-7 · The Mansion Inn (เทียนเหมินซาน)",cn:"四大名筑美学客栈（天门山国家森林公园店）",addr:"永定区天门山索道附近",py:"Sìdà Míngzhù",tel:""},
+    {ic:"🌆",th:"ที่พักคืน 8-9 · Pujing Hotel (ฉางซา)",cn:"长沙璞境酒店（万家丽广场高桥北地铁站店）",addr:"雨花区高桥北地铁站旁",py:"Pújìng Jiǔdiàn",tel:""},
+    {ic:"🚄",th:"สถานีรถไฟจางเจียเจี้ยตะวันตก",cn:"张家界西站",addr:"永定区沙堤街道",py:"Zhāngjiājiè Xī Zhàn",tel:""},
+    {ic:"✈️",th:"สนามบินหวงฮวา อาคาร T2",cn:"长沙黄花国际机场 T2航站楼",addr:"长沙县机场大道",py:"Huánghuā Jīchǎng",tel:""}
+  ];
+  var placePick=$("#placePick"),driverShow=$("#driverShow"),drvSpeakTxt="";
+  function renderPlaces(){
+    $("#placeList").innerHTML=places.map(function(p,i){
+      return '<button class="place-btn" data-i="'+i+'"><span class="ic2">'+p.ic+'</span>'+
+        '<span><b>'+p.th+'</b><span>'+p.cn+(p.tel?' · ☎ '+p.tel:'')+'</span></span></button>';
+    }).join("");
+  }
+  function openDriverCard(p){
+    placePick.classList.remove("show");
+    $("#drvHead").innerHTML='师傅您好，请带我去：<small>(คนขับครับ ช่วยพาไปที่นี่หน่อยครับ)</small>';
+    $("#drvTitle").textContent=p.cn;
+    $("#drvLines").innerHTML='<div>'+p.addr+'</div>'+(p.tel?'<div style="color:#a5f3fc">☎ '+p.tel+'</div>':'');
+    $("#drvThai").textContent=p.th+" · "+p.py;
+    drvSpeakTxt="请带我去"+p.cn+"，地址是"+p.addr;
+    driverShow.classList.add("show");
+  }
+  function openInfoCard(cfg){
+    $("#drvHead").innerHTML=cfg.head;
+    $("#drvTitle").textContent=cfg.title;
+    $("#drvLines").innerHTML=cfg.lines.map(function(l){return '<div>'+l+'</div>'}).join("");
+    $("#drvThai").textContent=cfg.thai;
+    drvSpeakTxt=cfg.speak;
+    driverShow.classList.add("show");
+  }
+  $("#openDriver").addEventListener("click",function(){renderPlaces();placePick.classList.add("show")});
+  placePick.addEventListener("click",function(e){
+    var b=e.target.closest(".place-btn");
+    if(b){openDriverCard(places[+b.dataset.i]);return}
+    if(!e.target.closest(".picker-panel"))placePick.classList.remove("show");
+  });
+  driverShow.addEventListener("click",function(e){
+    if(e.target.closest("#drvSpeak"))return;
+    driverShow.classList.remove("show");
+  });
+  $("#drvSpeak").addEventListener("click",function(e){e.stopPropagation();speakCn(drvSpeakTxt)});
+
+  /* ---- SOS page ---- */
+  $("#sosDriverHome").addEventListener("click",function(){openDriverCard(places[0])});
+  $("#sosShowLoc").addEventListener("click",function(){
+    openInfoCard({
+      head:'我在这里，请过来帮我 <small>(ฉันอยู่ตรงนี้ ช่วยมาหาหน่อย)</small>',
+      title:'湖南省长沙市芙蓉区',
+      lines:['五一大道98号附近','28.1958° N, 112.9773° E'],
+      thai:'ตำแหน่งปัจจุบันจาก GPS ออฟไลน์ · แม่นยำ ±8 เมตร',
+      speak:'我在湖南省长沙市芙蓉区五一大道98号附近，请过来帮我'
+    });
+  });
+  $("#sosShowMed").addEventListener("click",function(){
+    openInfoCard({
+      head:'我需要帮助！医疗信息 <small>(ฉันต้องการความช่วยเหลือ — ข้อมูลสุขภาพ)</small>',
+      title:'血型 O+ · 对青霉素过敏',
+      lines:['患有高血压 · 服用氨氯地平 5mg','紧急联系人（妻子）+66 89 123 4567'],
+      thai:'กรุ๊ปเลือด O+ · แพ้เพนิซิลลิน · ความดันสูง · ยา Amlodipine 5mg เช้า',
+      speak:'我需要帮助。我的血型是O型，对青霉素过敏，患有高血压。'
+    });
+  });
+  $("#sosInsurance").addEventListener("click",function(){showView("ready")});
+  $("#sosPhrases").addEventListener("click",function(){curCat="sos";renderPhrases();showView("phrases")});
+  $("#sosPacksLink").addEventListener("click",function(){showView("packs")});
+  updateReady();
+
+  /* ---- booking affiliate (ใส่ ID จริงที่นี่ที่เดียว) ---- */
+  var AFF={
+    trip:{allianceid:"YOUR_ALLIANCEID",sid:"YOUR_SID"}, // Trip.com Affiliate
+    klook:{aid:"YOUR_AID"},                             // Klook Affiliate
+    kkday:{cid:"YOUR_CID"}                              // KKday Affiliate
+  };
+  function qs(q){return Object.keys(q).map(function(k){return k+"="+encodeURIComponent(q[k])}).join("&")}
+  function tripUrl(path,q){q=q||{};q.allianceid=AFF.trip.allianceid;q.sid=AFF.trip.sid;q.locale="th-TH";return "https://th.trip.com/"+path+"?"+qs(q)}
+  function klookUrl(query){return "https://www.klook.com/th/search/result/?"+qs({query:query,aid:AFF.klook.aid})}
+  function kkdayUrl(query){return "https://www.kkday.com/th/product/productlist?"+qs({keyword:query,cid:AFF.kkday.cid})}
+  function cleanTitle(t){return t.replace(/[^฀-๿a-zA-Z0-9 ().+\-]/g,"").trim()}
+  function bookBtn(s){
+    var u=null;
+    if(/✈|บิน/.test(s[1]))u=tripUrl("flights/",{dcity:"bkk",acity:"csx"});
+    else if(/🚄|รถไฟ|Maglev/i.test(s[1]))u=tripUrl("trains/",{});
+    else if(s[3][0]==="spot")u=klookUrl(cleanTitle(s[1]));
+    return u?'<a class="bbook" target="_blank" rel="noopener sponsored" href="'+u+'" title="จองผ่านพันธมิตร">🎟️ จอง</a>':'';
+  }
+  $("#bkFlight").href=tripUrl("flights/showfarefirst",{dcity:"bkk",acity:"csx",ddate:"2026-09-12",rdate:"2026-09-21",triptype:"rt",quantity:1});
+  $("#bkTrain").href=tripUrl("trains/list",{departurecity:"Changsha",arrivalcity:"Zhangjiajie",departdate:"2026-09-12"});
+  $("#bkTripTtd").href=tripUrl("things-to-do/list",{keyword:"Zhangjiajie"});
+  $("#bkKlook").href=klookUrl("จางเจียเจี้ย Zhangjiajie");
+  $("#bkKkday").href=kkdayUrl("จางเจียเจี้ย");
+
+  /* ---- planning board ---- */
+  /* dayDates/dayDow ผูกกับทริปที่กำลังเปิดอยู่ (activeTrip.startDate + dayCount) คำนวณใหม่ทุกครั้งที่
+     สลับ/สร้าง/โหลดทริป ผ่าน applyCalendar() — ใช้ Date object ล้วน จึงข้ามปี (เช่น 31 ธ.ค.→1 ม.ค.) ถูกต้องเอง */
+  var THAI_MONTHS_ABBR=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+  var THAI_DOW_FULL=["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัส","ศุกร์","เสาร์"];
+  function computeCalendar(startISO,dayCount){
+    var dates={},dow={},base=new Date(startISO+"T00:00:00");
+    for(var n=1;n<=dayCount;n++){
+      var d=new Date(base.getTime());
+      d.setDate(d.getDate()+(n-1));
+      dates[n]=d.getDate()+" "+THAI_MONTHS_ABBR[d.getMonth()];
+      dow[n]=THAI_DOW_FULL[d.getDay()];
+    }
+    return {dates:dates,dow:dow};
+  }
+  var dayDates={},dayDow={};
+  function applyCalendar(trip){
+    var cal=computeCalendar(trip.startDate,trip.dayCount);
+    dayDates=cal.dates;dayDow=cal.dow;
+  }
+  /* activeTrip ต้องมีค่าก่อน renderBoard()/runDoctor() ตัวแรกที่รันตอนโหลดสคริปต์ (ด้านล่าง) —
+     ค่าเริ่มต้นนี้คือดีโมหูหนาน ระบบหลายทริปท้ายไฟล์จะ override ให้ตรงกับทริปที่บันทึกไว้ล่าสุดอีกที */
+  var activeTrip={id:"default",name:"หูหนานครบสูตร",sub:"จางเจียเจี้ย · เฟิ่งหวง · ฝูหรง · เทียนเหมินซาน · ฉางซา",startDate:"2026-09-12",dayCount:10,budget:6000};
+  applyCalendar(activeTrip);
+  renderDayStrip();
+  var backlog=[
+    ["--","🦊 โชว์จิ้งจอกเหมยลี่ (天门狐仙)","โชว์กลางแจ้งฉากภูเขาจริงที่เทียนเหมินซาน รอบ 20:00 · เหมาะคืนวัน 6-7",["spot","ที่เที่ยว"],238],
+    ["--","🌃 ล่องเรือแม่น้ำเซียงยามค่ำ","รอบ 20:00 เห็นไฟตึก IFS เต็มตา · เหมาะคืนวัน 8-9",["spot","ที่เที่ยว"],128],
+    ["--","🍧 บิงเฟิ่นถนนไท่ผิง","ของหวานเย็นชื่นใจหลังเดินทั้งวันที่ฉางซา",["food","อาหาร"],15]
+  ];
+  function getDay(n){if(!days[n])days[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};return days[n]}
+  function colArr(ci){return ci===0?backlog:getDay(ci).s}
+  function colCost(ci){return colArr(ci).reduce(function(a,s){return a+(+s[4]||0)},0)}
+  function colCards(ci){
+    var arr=colArr(ci);
+    return arr.map(function(s,i){
+      return '<div class="bcard" draggable="true" data-ci="'+ci+'" data-i="'+i+'">'+
+        (s[0]!=="--"&&s[0]?'<span class="btime num">'+s[0]+'</span>':'')+
+        '<div class="bt">'+s[1]+'</div>'+
+        '<div class="brow"><span class="tag '+s[3][0]+'">'+s[3][1]+'</span>'+
+        (s[4]?'<span class="bcost2 num">¥'+s[4]+'</span>':'')+
+        bookBtn(s)+
+        '<span class="bmove">'+
+        (ci>0?'<button data-mv="-1" data-ci="'+ci+'" data-i="'+i+'" aria-label="ย้ายไปคอลัมน์ก่อนหน้า">◀</button>':'')+
+        (ci<activeTrip.dayCount?'<button data-mv="1" data-ci="'+ci+'" data-i="'+i+'" aria-label="ย้ายไปวันถัดไป">▶</button>':'')+
+        '</span></div></div>';
+    }).join("")+'<button class="badd" data-add="'+ci+'">＋ เพิ่มการ์ด</button>';
+  }
+  function renderBoard(){
+    var html='<div class="bcol backlog" data-col="0"><div class="bcol-head"><b>💡 ไอเดีย</b><span>ยังไม่จัดวัน</span><span class="bcost num">'+backlog.length+'</span></div>'+colCards(0)+'</div>';
+    var total=0;
+    for(var n=1;n<=activeTrip.dayCount;n++){
+      var d=getDay(n);d.m=d.s.length+" จุดหมาย";
+      var c=colCost(n);total+=c;
+      html+='<div class="bcol" data-col="'+n+'"><div class="bcol-head"><b>วัน '+n+'</b><span class="num">'+dayDates[n]+'</span>'+
+        '<span class="bcost num">'+d.s.length+' จุด'+(c?' · ¥'+c.toLocaleString():'')+'</span>'+
+        '<button class="bopt" data-opt="'+n+'" title="เรียงเส้นทางอัจฉริยะ" aria-label="เรียงเส้นทางวัน '+n+'">✨</button></div>'+colCards(n)+'</div>';
+    }
+    $("#board").innerHTML=html;
+    var bd=$("#planBudget");
+    bd.className="budget-chip num"+(total>activeTrip.budget?" over":"");
+    bd.innerHTML=(total>activeTrip.budget?"⚠️ ":"")+"แผนใช้จ่ายรวม ≈ <b>¥"+total.toLocaleString()+"</b> / งบทริป ¥"+activeTrip.budget.toLocaleString();
+  }
+  function sortDay(n){getDay(n).s.sort(function(a,b){return (a[0]==="--"?"99":a[0]).localeCompare(b[0]==="--"?"99":b[0])})}
+  function moveItem(ci,i,to){
+    if(ci===to){renderBoard();return}
+    var item=colArr(ci).splice(i,1)[0];
+    colArr(to).push(item);
+    if(to>0)sortDay(to);
+    renderBoard();renderDay(curDay);
+  }
+  $("#board").addEventListener("click",function(e){
+    var op=e.target.closest("[data-opt]");
+    if(op){optimizeDay(+op.dataset.opt);return}
+    var mv=e.target.closest("[data-mv]");
+    if(mv){moveItem(+mv.dataset.ci,+mv.dataset.i,+mv.dataset.ci+(+mv.dataset.mv));return}
+    var ad=e.target.closest("[data-add]");
+    if(ad){
+      colArr(+ad.dataset.add).push(["--","📍 จุดหมายใหม่","แตะเพื่อแก้ไขได้ในแอปจริง",["spot","ที่เที่ยว"]]);
+      renderBoard();renderDay(curDay);
+    }
+  });
+  /* drag & drop */
+  var dragSrc=null;
+  $("#board").addEventListener("dragstart",function(e){
+    var c=e.target.closest(".bcard");if(!c)return;
+    dragSrc={ci:+c.dataset.ci,i:+c.dataset.i};
+    c.classList.add("dragging");
+    if(e.dataTransfer){e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","move")}
+  });
+  $("#board").addEventListener("dragend",function(){
+    dragSrc=null;
+    $$(".bcard.dragging").forEach(function(x){x.classList.remove("dragging")});
+    $$(".bcol.drop").forEach(function(x){x.classList.remove("drop")});
+  });
+  $("#board").addEventListener("dragover",function(e){
+    var col=e.target.closest(".bcol");if(!col||!dragSrc)return;
+    e.preventDefault();
+    if(e.dataTransfer)e.dataTransfer.dropEffect="move";
+    if(!col.classList.contains("drop")){
+      $$(".bcol.drop").forEach(function(x){x.classList.remove("drop")});
+      col.classList.add("drop");
+    }
+  });
+  $("#board").addEventListener("drop",function(e){
+    var col=e.target.closest(".bcol");if(!col||!dragSrc)return;
+    e.preventDefault();
+    moveItem(dragSrc.ci,dragSrc.i,+col.dataset.col);
+    dragSrc=null;
+  });
+  renderBoard();
+
+  /* ---- import Excel/CSV ---- */
+  var importModal=$("#importModal"),parsedRows=null;
+  var CSV_HEAD="วัน,เวลา,สถานที่,รายละเอียด,หมวด,งบ(¥)";
+  var CSV_TMPL=CSV_HEAD+"\n4,07:30,เขาเทียนเหมินซาน,กระเช้ายาวที่สุดในโลก,ที่เที่ยว,278\n4,12:30,ร้านหมี่ถู่เจีย,เส้นข้าวซุปกระดูกหมู,อาหาร,15";
+  var DEMO_CSV=CSV_HEAD+"\n"+
+    "6,20:00,🦊 โชว์จิ้งจอกเหมยลี่,โชว์กลางแจ้งฉากภูเขาจริง จองรอบ 20:00,ที่เที่ยว,238\n"+
+    "7,16:00,🌉 สะพานแก้วแกรนด์แคนยอน,เผื่อเวลาเดินทางจากเทียนเหมินซาน ~1 ชม.,ที่เที่ยว,141\n"+
+    "8,21:00,🍧 บิงเฟิ่นถนนไท่ผิง,ของหวานปิดคืนแรกที่ฉางซา,อาหาร,15\n"+
+    "9,20:30,🌃 ล่องเรือแม่น้ำเซียงยามค่ำ,รอบ 20:30 เห็นไฟตึก IFS เต็มตา,ที่เที่ยว,128";
+  $("#dlTemplate").href="data:text/csv;charset=utf-8,%EF%BB%BF"+encodeURIComponent(CSV_TMPL);
+  var catMap={"อาหาร":["food","อาหาร"],"ที่เที่ยว":["spot","ที่เที่ยว"],"เดินทาง":["move","เดินทาง"],"ที่พัก":["move","ที่พัก"]};
+  function parseCsv(text){
+    text=text.replace(/^﻿/,"");
+    return text.split(/\r?\n/).filter(function(l){return l.trim()}).map(function(l){
+      var out=[],cur="",q=false;
+      for(var i=0;i<l.length;i++){
+        var ch=l[i];
+        if(ch==='"'){q=!q;continue}
+        if(ch===","&&!q){out.push(cur);cur="";continue}
+        cur+=ch;
+      }
+      out.push(cur);
+      return out.map(function(s){return s.trim()});
+    });
+  }
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+  function previewRows(rows){
+    if(rows.length&&rows[0].join(",").indexOf("วัน")>-1)rows=rows.slice(1);
+    rows=rows.filter(function(r){return r.length>=3&&+r[0]>=1&&+r[0]<=activeTrip.dayCount});
+    parsedRows=rows;
+    $("#impPreview").style.display="flex";
+    if(!rows.length){
+      $("#impTable").innerHTML="";
+      $("#impMsg").textContent="อ่านไฟล์ไม่สำเร็จ หรือไม่พบแถวที่คอลัมน์ วัน = 1–10";
+      return;
+    }
+    $("#impTable").innerHTML="<tr><th>วัน</th><th>เวลา</th><th>สถานที่</th><th>รายละเอียด</th><th>หมวด</th><th>งบ(¥)</th></tr>"+
+      rows.slice(0,8).map(function(r){
+        return "<tr><td class='num'>"+esc(r[0])+"</td><td class='num'>"+esc(r[1]||"--")+"</td><td>"+esc(r[2])+"</td><td>"+esc(r[3]||"")+"</td><td>"+esc(r[4]||"ที่เที่ยว")+"</td><td class='num'>"+esc(r[5]||"–")+"</td></tr>";
+      }).join("");
+    $("#impMsg").textContent="พบ "+rows.length+" รายการ"+(rows.length>8?" (แสดงตัวอย่าง 8 แถวแรก)":"")+" — กด “นำเข้าทั้งหมด” เพื่อยืนยัน";
+  }
+  function previewCsv(text){ previewRows(parseCsv(text)); }
+  function handleFile(f){
+    if(/\.xlsx?$/i.test(f.name)){
+      parsedRows=null;
+      $("#impPreview").style.display="flex";
+      $("#impTable").innerHTML="";
+      $("#impMsg").textContent="กำลังอ่านไฟล์ Excel...";
+      if(typeof XLSX==="undefined"){
+        $("#impMsg").textContent="✗ โหลดตัวอ่าน Excel (SheetJS) ไม่สำเร็จ — เช็กการเชื่อมต่อเน็ตแล้วลองใหม่ หรือ Save As เป็น CSV UTF-8 แทน";
+        return;
+      }
+      var rd=new FileReader();
+      rd.onload=function(){
+        try{
+          var wb=XLSX.read(rd.result,{type:"array"});
+          var ws=wb.Sheets[wb.SheetNames[0]];
+          var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:""})
+            .map(function(r){return r.map(function(c){return String(c==null?"":c).trim()})});
+          previewRows(rows);
+        }catch(e){
+          $("#impMsg").textContent="✗ อ่านไฟล์ Excel ไม่สำเร็จ: "+e.message;
+        }
+      };
+      rd.readAsArrayBuffer(f);
+      return;
+    }
+    var rd=new FileReader();
+    rd.onload=function(){previewCsv(rd.result)};
+    rd.readAsText(f,"utf-8");
+  }
+  function resetImport(){$("#impPreview").style.display="none";$("#impTable").innerHTML="";$("#impMsg").textContent="";parsedRows=null;$("#fileInput").value=""}
+  $("#openImport").addEventListener("click",function(){resetImport();importModal.classList.add("show")});
+  importModal.addEventListener("click",function(e){
+    if(!e.target.closest(".picker-panel"))importModal.classList.remove("show");
+  });
+  $("#impCancel").addEventListener("click",function(){importModal.classList.remove("show")});
+  var dz=$("#dropZone"),fi=$("#fileInput");
+  dz.addEventListener("click",function(){fi.click()});
+  dz.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();fi.click()}});
+  dz.addEventListener("dragover",function(e){e.preventDefault();dz.classList.add("over")});
+  dz.addEventListener("dragleave",function(){dz.classList.remove("over")});
+  dz.addEventListener("drop",function(e){
+    e.preventDefault();dz.classList.remove("over");
+    if(e.dataTransfer.files.length)handleFile(e.dataTransfer.files[0]);
+  });
+  fi.addEventListener("change",function(){if(fi.files.length)handleFile(fi.files[0])});
+  $("#demoImport").addEventListener("click",function(){previewCsv(DEMO_CSV)});
+  function csvField(v){v=String(v==null?"":v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+  $("#exportCsv").addEventListener("click",function(){
+    var rows=[CSV_HEAD],cnt=0;
+    for(var n=1;n<=activeTrip.dayCount;n++){
+      getDay(n).s.forEach(function(s){
+        rows.push([n,s[0]==="--"?"":s[0],s[1],s[2],s[3][1],s[4]||""].map(csvField).join(","));
+        cnt++;
+      });
+    }
+    var a=document.createElement("a");
+    a.href="data:text/csv;charset=utf-8,%EF%BB%BF"+encodeURIComponent(rows.join("\n"));
+    a.download="gopanda-trip-"+activeTrip.id+".csv";
+    document.body.appendChild(a);a.click();a.remove();
+    var toast=$("#planToast");
+    toast.textContent="✓ ส่งออกแผน "+cnt+" รายการเป็นไฟล์ CSV แล้ว (เปิดใน Excel ได้เลย)";
+    toast.hidden=false;
+    setTimeout(function(){toast.hidden=true},4000);
+  });
+  var CAT_FILL={"อาหาร":"FFF6E0B8","ที่เที่ยว":"FFCDE4F7","เดินทาง":"FFE2E2E2","ที่พัก":"FFE2E2E2"};
+  function loadLogoPngBuffer(maxSize){
+    return fetch("assets/mascot-lingling.png").then(function(r){return r.blob()}).then(function(blob){
+      return createImageBitmap(blob);
+    }).then(function(bmp){
+      var scale=Math.min(1,maxSize/Math.max(bmp.width,bmp.height));
+      var w=Math.round(bmp.width*scale),h=Math.round(bmp.height*scale);
+      var canvas=document.createElement("canvas");
+      canvas.width=w;canvas.height=h;
+      canvas.getContext("2d").drawImage(bmp,0,0,w,h);
+      return new Promise(function(resolve){
+        canvas.toBlob(function(b){b.arrayBuffer().then(function(buf){resolve({buf:buf,w:w,h:h})})},"image/png");
+      });
+    });
+  }
+  $("#exportXlsx").addEventListener("click",function(){
+    var toast=$("#planToast");
+    if(typeof ExcelJS==="undefined"){
+      toast.textContent="✗ โหลดตัวเขียน Excel (ExcelJS) ไม่สำเร็จ — เช็กการเชื่อมต่อเน็ตแล้วลองใหม่ หรือใช้ปุ่ม “ส่งออก CSV” แทน";
+      toast.hidden=false;setTimeout(function(){toast.hidden=true},4500);
+      return;
+    }
+    var wb=new ExcelJS.Workbook();
+    wb.creator="GoPandaCN";
+    var ws=wb.addWorksheet("แผนทริป",{views:[{state:"frozen",ySplit:2,showGridLines:false}]});
+    wb.views=[{activeTab:0}];
+    ws.columns=[
+      {key:"day",width:8},{key:"time",width:10},{key:"place",width:45},
+      {key:"desc",width:60},{key:"cat",width:15},{key:"budget",width:15}
+    ];
+    ws.mergeCells("A1:F1");
+    var titleCell=ws.getCell("A1");
+    titleCell.value="🐼 GoPandaCN — แผนทริป: "+(activeTrip.name||activeTrip.id);
+    titleCell.font={bold:true,size:20,color:{argb:"FF1E3A5F"}};
+    titleCell.alignment={vertical:"middle",horizontal:"center"};
+    ws.getRow(1).height=40;
+    function estRowHeight(place,desc){
+      var lineH=16,base=35;
+      var linesC=Math.ceil(String(place||"").length/38);
+      var linesD=Math.ceil(String(desc||"").length/52);
+      var lines=Math.max(1,linesC,linesD);
+      return Math.max(base,lines*lineH+8);
+    }
+    var head=["วัน","เวลา","สถานที่","รายละเอียด","หมวด","งบ (¥)"];
+    var headRow=ws.getRow(2);
+    head.forEach(function(h,i){headRow.getCell(i+1).value=h});
+    headRow.eachCell(function(cell){
+      cell.font={bold:true,size:12,color:{argb:"FFFFFFFF"}};
+      cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1E3A5F"}};
+      cell.alignment={vertical:"middle",horizontal:"center"};
+      cell.border={top:{style:"thin"},left:{style:"thin"},bottom:{style:"thin"},right:{style:"thin"}};
+    });
+    headRow.height=35;
+    var thinBorder={top:{style:"thin",color:{argb:"FFD0D0D0"}},left:{style:"thin",color:{argb:"FFD0D0D0"}},
+      bottom:{style:"thin",color:{argb:"FFD0D0D0"}},right:{style:"thin",color:{argb:"FFD0D0D0"}}};
+    var cnt=0,totalBudget=0;
+    for(var n=1;n<=activeTrip.dayCount;n++){
+      getDay(n).s.forEach(function(s){
+        var catLabel=s[3][1],budget=s[4]?Number(s[4]):null;
+        var row=ws.addRow({
+          day:n,time:s[0]==="--"?"":s[0],place:s[1],desc:s[2],cat:catLabel,
+          budget:budget
+        });
+        row.height=estRowHeight(s[1],s[2]);
+        row.eachCell({includeEmpty:true},function(cell,colNum){
+          cell.border=thinBorder;
+          cell.font={size:12};
+          cell.alignment={vertical:"middle"};
+          if(colNum===1||colNum===2||colNum===5||colNum===6)cell.alignment.horizontal="center";
+          if(colNum===3||colNum===4)cell.alignment={vertical:"middle",wrapText:true,indent:1};
+        });
+        if(budget!=null){row.getCell(6).numFmt="#,##0";totalBudget+=budget}
+        var fill=CAT_FILL[catLabel];
+        if(fill)row.getCell(5).fill={type:"pattern",pattern:"solid",fgColor:{argb:fill}};
+        cnt++;
+      });
+    }
+    ws.autoFilter={from:{row:2,column:1},to:{row:2,column:6}};
+    var sumRow=ws.addRow({day:"",time:"",place:"",desc:"",cat:"รวมงบทั้งทริป",budget:totalBudget});
+    sumRow.height=35;
+    sumRow.getCell(5).font={bold:true,size:12};
+    sumRow.getCell(5).alignment={horizontal:"center",vertical:"middle"};
+    sumRow.getCell(6).font={bold:true,size:12};
+    sumRow.getCell(6).numFmt="#,##0";
+    sumRow.getCell(6).alignment={horizontal:"center",vertical:"middle"};
+    sumRow.eachCell(function(cell){cell.border={top:{style:"double"}}});
+    ws.pageSetup={printArea:"A1:F"+ws.rowCount,fitToPage:true,fitToWidth:1,fitToHeight:0};
+    loadLogoPngBuffer(72).then(function(logo){
+      var imgId=wb.addImage({buffer:logo.buf,extension:"png"});
+      var h=Math.min(36,logo.h),w=Math.round(h*(logo.w/logo.h));
+      ws.addImage(imgId,{tl:{col:0.15,row:0.12},ext:{width:w,height:h}});
+    }).catch(function(e){console.warn("โลโก้ไม่สามารถฝังในไฟล์ Excel ได้ (ส่งออกต่อโดยไม่มีโลโก้):",e)})
+    .then(function(){return wb.xlsx.writeBuffer()}).then(function(buf){
+      var blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement("a");
+      var safeName=String(activeTrip.name||activeTrip.id).replace(/[\\/:*?"<>|]+/g,"").trim()||activeTrip.id;
+      a.href=url;a.download="gopanda-trip-"+safeName+".xlsx";
+      document.body.appendChild(a);a.click();a.remove();
+      URL.revokeObjectURL(url);
+      toast.textContent="✓ ส่งออกแผน "+cnt+" รายการเป็นไฟล์ Excel จัดฟอร์แมตแล้ว";
+      toast.hidden=false;setTimeout(function(){toast.hidden=true},4000);
+    });
+  });
+  $("#impConfirm").addEventListener("click",function(){
+    if(!parsedRows||!parsedRows.length)return;
+    var touched={};
+    parsedRows.forEach(function(r){
+      var n=+r[0],d=getDay(n);
+      var cost=+String(r[5]||"").replace(/[^\d.]/g,"")||0;
+      d.s.push([r[1]||"--",r[2],r[3]||"",catMap[r[4]]||["spot","ที่เที่ยว"],cost]);
+      touched[n]=1;
+      if(d.t==="ยังไม่ได้วางแผน")d.t="แผนที่นำเข้าจากไฟล์";
+    });
+    Object.keys(touched).forEach(function(n){sortDay(+n)});
+    renderBoard();renderDay(curDay);
+    importModal.classList.remove("show");
+    var toast=$("#planToast");
+    toast.textContent="✓ นำเข้า "+parsedRows.length+" รายการ เข้าสู่วัน "+Object.keys(touched).join(", ")+" แล้ว";
+    toast.hidden=false;
+    setTimeout(function(){toast.hidden=true},5000);
+    resetImport();
+  });
+
+  /* ---- Plan Doctor ---- */
+  function toMin(t){if(!t||t==="--")return null;var p=t.split(":");return (+p[0])*60+(+p[1]||0)}
+  function runDoctor(){
+    var f=[],totalStops=0,total=0;
+    for(var n=1;n<=activeTrip.dayCount;n++){
+      var d=getDay(n),items=d.s,cost=colCost(n);
+      totalStops+=items.length;total+=cost;
+      items.forEach(function(s){
+        if(/พิพิธภัณฑ์/.test(s[1])&&dayDow[n]==="จันทร์")
+          f.push({sev:"crit",msg:"วัน "+n+" ("+dayDates[n]+") เป็นวันจันทร์ — พิพิธภัณฑ์ปิดนะคะป๋า!",fix:"ลากการ์ดไปวันอื่น พิพิธภัณฑ์หูหนานปิดทุกวันจันทร์"});
+      });
+      if(items.length>5)f.push({sev:"warn",msg:"วัน "+n+" อัดแน่น "+items.length+" จุดหมาย",fix:"แนะนำไม่เกิน 5 จุด/วัน เผื่อเวลาหลง + ต่อคิว + ถ่ายรูป"});
+      if(n<activeTrip.dayCount&&items.length>=3&&!items.some(function(s){return s[3][0]==="food"}))
+        f.push({sev:"warn",msg:"วัน "+n+" ยังไม่มีมื้ออาหารในแผนเลย",fix:"เพิ่มการ์ดร้านอาหาร หรือถามหลิงหลิงว่าแถวนั้นมีอะไรเด็ด"});
+      if(cost>900)f.push({sev:"warn",msg:"วัน "+n+" งบสูง ¥"+cost.toLocaleString(),fix:"เกลี่ยกิจกรรมราคาแรงไปวันอื่น ช่วยให้กระเป๋าเงินหายใจทัน"});
+      var ts=items.map(function(s){return toMin(s[0])}).filter(function(x){return x!==null}).sort(function(a,b){return a-b});
+      for(var i=1;i<ts.length;i++)if(ts[i]-ts[i-1]<45){
+        f.push({sev:"warn",msg:"วัน "+n+" มีจุดหมายเวลาชิดกันไม่ถึง 45 นาที",fix:"เมืองจีนใหญ่กว่าที่คิด เผื่อเวลาเดินทางระหว่างจุดอย่างน้อย 45 นาที"});break;
+      }
+      if(n===activeTrip.dayCount&&items.length>4)f.push({sev:"warn",msg:"วัน "+n+" เป็นวันเดินทางกลับ แต่มีถึง "+items.length+" กิจกรรม",fix:"เผื่อเวลาไปสนามบิน/สถานี อย่างน้อย 2.5–3 ชม.ก่อนเวลาออกเดินทาง"});
+      if(items.length===0)f.push({sev:"warn",msg:"วัน "+n+" ("+dayDates[n]+") ยังว่างเปล่า",fix:"ลากไอเดียจากคอลัมน์ซ้ายมาลง หรือกดนำเข้าจากไฟล์ Excel"});
+    }
+    if(total>activeTrip.budget)f.push({sev:"crit",msg:"งบรวม ¥"+total.toLocaleString()+" เกินงบทริป ¥"+activeTrip.budget.toLocaleString()+" แล้ว",fix:"ตัดหรือเลื่อนกิจกรรมจนชิปงบด้านบนหายแดง"});
+    if(backlog.length)f.push({sev:"ok",msg:"มีไอเดียค้างอยู่ "+backlog.length+" ใบในคอลัมน์ซ้าย",fix:"ลองหาช่องว่างให้พวกมันดูนะคะ เสียดายของดี"});
+    var crit=f.filter(function(x){return x.sev==="crit"}).length;
+    var warn=f.filter(function(x){return x.sev==="warn"}).length;
+    if(!crit&&!warn)f.unshift({sev:"ok",msg:"แผนดูดีมากค่ะป๋า พร้อมออกเดินทาง! 🐼",fix:""});
+    $("#docSummary").textContent="ตรวจ "+activeTrip.dayCount+" วัน "+totalStops+" จุดหมาย — พบ "+crit+" จุดวิกฤต · "+warn+" คำเตือน";
+    $("#docList").innerHTML=f.map(function(x){
+      var lbl=x.sev==="crit"?"วิกฤต":x.sev==="warn"?"เตือน":"ทิป";
+      return '<div class="doc-item"><span class="sev '+x.sev+'">'+lbl+'</span><p>'+x.msg+(x.fix?'<small>💡 '+x.fix+'</small>':'')+'</p></div>';
+    }).join("");
+    $("#docModal").classList.add("show");
+  }
+  $("#openDoctor").addEventListener("click",runDoctor);
+  $("#docClose").addEventListener("click",function(){$("#docModal").classList.remove("show")});
+  $("#docModal").addEventListener("click",function(e){
+    if(!e.target.closest(".picker-panel"))$("#docModal").classList.remove("show");
+  });
+
+  /* ---- QR handoff & .gopanda file ---- */
+  function hashStr(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return h}
+  var qrMascotImg=new Image(),qrMascotReady=false;
+  qrMascotImg.onload=function(){qrMascotReady=true;drawQr()};
+  qrMascotImg.src="assets/mascot-64.png";
+  function drawQr(){
+    var cv=$("#qrCanvas"),ctx=cv.getContext("2d"),N=29,pad=2,cell=cv.width/(N+pad*2);
+    var seed=hashStr(JSON.stringify(days)+JSON.stringify(backlog));
+    function rnd(){seed=(seed*1103515245+12345)>>>0;return seed/4294967296}
+    function box(x,y,w,h){ctx.fillRect((x+pad)*cell,(y+pad)*cell,w*cell,h*cell)}
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle="#0f172a";
+    for(var y=0;y<N;y++)for(var x=0;x<N;x++){
+      var inF=(x<9&&y<9)||(x>=N-9&&y<9)||(x<9&&y>=N-9);
+      if(!inF&&rnd()<.45)box(x,y,1,1);
+    }
+    function finder(x,y){box(x,y,7,1);box(x,y+6,7,1);box(x,y,1,7);box(x+6,y,1,7);box(x+2,y+2,3,3)}
+    finder(0,0);finder(N-7,0);finder(0,N-7);
+    for(var i=8;i<N-8;i+=2){box(i,6,1,1);box(6,i,1,1)}
+    ctx.fillStyle="#fff";ctx.fillRect((N/2-2.5+pad)*cell,(N/2-2.5+pad)*cell,5*cell,5*cell);
+    if(qrMascotReady){
+      var s=5*cell*0.88,cx=(N/2+pad)*cell,cy=(N/2+pad)*cell;
+      ctx.save();
+      ctx.beginPath();
+      if(ctx.roundRect)ctx.roundRect(cx-s/2,cy-s/2,s,s,6);else ctx.rect(cx-s/2,cy-s/2,s,s);
+      ctx.clip();
+      ctx.drawImage(qrMascotImg,cx-s/2,cy-s/2,s,s);
+      ctx.restore();
+    }else{
+      ctx.font=(cell*3.6)+"px serif";ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText("🐼",(N/2+pad)*cell,(N/2+pad+0.1)*cell);
+    }
+  }
+  function tripStats(){
+    var c=0,total=0;
+    for(var n=1;n<=activeTrip.dayCount;n++){c+=getDay(n).s.length;total+=colCost(n)}
+    return {c:c,total:total};
+  }
+  $("#openQr").addEventListener("click",function(){
+    var st=tripStats();
+    $("#qrMeta").textContent="ทริป"+activeTrip.name+" "+dayDates[1]+"–"+dayDates[activeTrip.dayCount]+" · "+st.c+" จุดหมาย · งบ ≈ ¥"+st.total.toLocaleString()+" · QR อัปเดตตามแผนล่าสุดเสมอ";
+    drawQr();
+    resetGopandaImport();
+    $("#qrModal").classList.add("show");
+  });
+  $("#qrModal").addEventListener("click",function(e){
+    if(e.target.closest("#dlTrip")){
+      var data={app:"GoPandaCN",version:1,trip:{name:activeTrip.name,startDate:activeTrip.startDate,dayCount:activeTrip.dayCount,budget:activeTrip.budget},days:days,backlog:backlog,journal:journalState,checklist:checklist};
+      var a=document.createElement("a");
+      a.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(data));
+      a.download=activeTrip.id+".gopanda";
+      document.body.appendChild(a);a.click();a.remove();
+      return;
+    }
+    if(!e.target.closest(".picker-panel"))$("#qrModal").classList.remove("show");
+  });
+
+  /* ---- Import .gopanda (reverse of dlTrip export above) ---- */
+  var gopandaImportData=null;
+  function resetGopandaImport(){
+    $("#gopandaImportPreview").style.display="none";
+    $("#gopandaImportMsg").innerHTML="";
+    $("#gopandaFileInput").value="";
+    gopandaImportData=null;
+  }
+  $("#importGopanda").addEventListener("click",function(){$("#gopandaFileInput").click()});
+  $("#gopandaFileInput").addEventListener("change",function(){
+    var f=this.files[0];
+    if(!f)return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      var data;
+      try{data=JSON.parse(rd.result)}catch(e){data=null}
+      if(!data||data.app!=="GoPandaCN"||!data.days){
+        $("#gopandaImportMsg").innerHTML="✗ ไฟล์นี้ไม่ใช่ไฟล์ทริป .gopanda ของ GoPandaCN ที่ถูกต้อง";
+        $("#gopandaImportPreview").style.display="block";
+        gopandaImportData=null;
+        return;
+      }
+      var dayCount=Object.keys(data.days).length;
+      var stopCount=Object.values(data.days).reduce(function(a,d){return a+(d.s?d.s.length:0)},0);
+      var backlogCount=(data.backlog||[]).length;
+      var tripName=(data.trip&&data.trip.name)||"ทริปไม่มีชื่อ";
+      $("#gopandaImportMsg").innerHTML="พบไฟล์ทริป <b>"+tripName+"</b> — "+dayCount+" วัน "+stopCount+" จุดหมาย"+
+        (backlogCount?" + ไอเดียค้าง "+backlogCount+" ใบ":"")+
+        "<br><small style=\"color:#f59e0b\">⚠️ การนำเข้าจะแทนที่แผนทั้งหมดที่มีอยู่ตอนนี้</small>";
+      $("#gopandaImportPreview").style.display="block";
+      gopandaImportData=data;
+    };
+    rd.readAsText(f,"utf-8");
+  });
+  $("#gopandaImportCancel").addEventListener("click",resetGopandaImport);
+  $("#gopandaImportConfirm").addEventListener("click",function(){
+    if(!gopandaImportData)return;
+    var tm=gopandaImportData.trip||{};
+    var tripName=tm.name||"ทริปนำเข้า";
+    // ไฟล์เก่าก่อนรอบอัปเดต custom-วัน อาจมีแค่ dates:"YYYY-MM-DD/YYYY-MM-DD" ไม่มี startDate/dayCount ตรง ๆ
+    var startDate=tm.startDate;
+    var dayCount=tm.dayCount;
+    if(!startDate&&tm.dates){
+      var parts=String(tm.dates).split("/");
+      startDate=parts[0];
+      if(!dayCount&&parts[1]){
+        var d1=new Date(parts[0]+"T00:00:00"),d2=new Date(parts[1]+"T00:00:00");
+        dayCount=Math.round((d2-d1)/86400000)+1;
+      }
+    }
+    activeTrip={id:activeTrip.id,name:tripName,sub:activeTrip.sub,
+      startDate:startDate||"2026-09-12",dayCount:dayCount||Object.keys(gopandaImportData.days||{}).length||10,
+      budget:tm.budget||6000};
+    switchToLiveData(gopandaImportData.days,gopandaImportData.backlog||[],gopandaImportData.journal||{spent:0,entries:[]},gopandaImportData.checklist||defaultChecklist());
+    persistCurrentTrip();
+    $("#qrModal").classList.remove("show");
+    resetGopandaImport();
+    var toast=$("#planToast");
+    toast.textContent="✓ นำเข้าทริป \""+tripName+"\" แล้ว";
+    toast.hidden=false;
+    setTimeout(function(){toast.hidden=true},4000);
+  });
+
+  /* ---- Premium ---- */
+  var isPremium=false;
+  $("#openPremium").addEventListener("click",function(){$("#premModal").classList.add("show")});
+  $("#premGo").addEventListener("click",function(){
+    if(isPremium)return;
+    isPremium=true;
+    $("#premChip").hidden=false;
+    $("#premGo").textContent="✓ เป็นสมาชิก Premium แล้ว — ขอบคุณที่สนับสนุนครับ 🐼";
+    $("#premNote").textContent="ปลดล็อกแล้ว: ทุกเมือง · AI ไม่จำกัด · Party Mode · เสียงไกด์ HD";
+    $("#openPremium").innerHTML="✨ Premium ใช้งานอยู่ <small>ทุกเมือง · AI ไม่จำกัด · Party Mode พร้อม</small>";
+  });
+  [$("#premModal"),$("#aiModal"),$("#recapModal")].forEach(function(m){
+    m.addEventListener("click",function(e){
+      if(!e.target.closest(".picker-panel"))m.classList.remove("show");
+    });
+  });
+
+  /* ---- AI จัดทริป ---- */
+  var aiPlans={
+    "สายกิน":[
+      ["09:00","🍜 ตลาดเช้าเหวินเหอโหย่ว","ตระเวนของกินท้องถิ่น 8 เจ้าในตลาดเดียว",["food","อาหาร"],60],
+      ["13:00","🦆 เป็ดพะโล้ฉางซาเจ้าเก่า","ร้าน 40 ปี คนท้องถิ่นต่อคิวทุกเที่ยง",["food","อาหาร"],88],
+      ["18:30","🌶️ บุฟเฟ่ต์หม้อไฟหูหนาน","เผ็ดจัดจ้านสมชื่อเมืองพริก เตรียมนมไว้ดับ",["food","อาหาร"],158]
+    ],
+    "สายธรรมชาติ":[
+      ["08:00","🥾 เทรลเลียบเขาเทียนจื่อซาน","วิวเสาหินกลางหมอกเช้า คนยังไม่เยอะ",["spot","ที่เที่ยว"]],
+      ["13:30","🛶 ล่องแพลำธารจินเปียน","น้ำใสระดับเห็นตัวปลา",["spot","ที่เที่ยว"],98],
+      ["17:00","🌄 จุดชมอาทิตย์ตกเหลาอูจ่าย","พาโนรามา 270 องศา ถ่ายรูปเงาเสาหิน",["spot","ที่เที่ยว"]]
+    ],
+    "พาพ่อแม่":[
+      ["09:30","🚌 รถรางชมเมือง + กระเช้า","เดินน้อย นั่งสบาย เห็นครบทุกมุม",["spot","ที่เที่ยว"],120],
+      ["12:00","🍲 ติ่มซำ + โจ๊กร้านดัง","รสอ่อน เก้าอี้นั่งสบาย มีห้องน้ำสะอาด",["food","อาหาร"],95],
+      ["15:30","🍵 โรงน้ำชาริมทะเลสาบ","พักครึ่งบ่าย จิบชาเก๊กฮวย ถ่ายรูปสวย",["food","อาหาร"],45]
+    ]
+  };
+  var aiStyle="สายกิน";
+  $("#aiStyles").addEventListener("click",function(e){
+    var c=e.target.closest(".cat-chip");if(!c)return;
+    aiStyle=c.dataset.style;
+    $$("#aiStyles .cat-chip").forEach(function(x){x.classList.toggle("active",x===c)});
+  });
+  $("#openAi").addEventListener("click",function(){$("#aiModal").classList.add("show")});
+  $("#aiGo").addEventListener("click",function(){
+    var filled=[];
+    for(var n=1;n<=activeTrip.dayCount&&filled.length<2;n++){
+      var d=getDay(n);
+      if(!d.s.length){
+        d.s=aiPlans[aiStyle].map(function(s){return s.slice()});
+        d.t="หลิงหลิงจัดให้ · "+aiStyle;
+        filled.push(n);
+      }
+    }
+    $("#aiModal").classList.remove("show");
+    var toast=$("#planToast");
+    if(filled.length){
+      renderBoard();renderDay(curDay);
+      toast.textContent="🪄 หลิงหลิงเติมแผน"+aiStyle+"ลงวัน "+filled.join(", ")+" แล้วค่ะ ลากปรับได้ตามใจเลย";
+    }else{
+      toast.textContent="ทุกวันมีแผนครบแล้วค่ะป๋า เก่งมาก 🐼";
+    }
+    toast.hidden=false;setTimeout(function(){toast.hidden=true},5000);
+  });
+
+  /* ---- เรียงเส้นทางอัจฉริยะ ---- */
+  function optimizeDay(n){
+    var d=getDay(n),toast=$("#planToast");
+    if(d.s.length<3){
+      toast.textContent="✨ วัน "+n+" จุดหมายน้อย เส้นทางเดิมดีอยู่แล้วค่ะ";
+    }else{
+      var a=d.s[1],b=d.s[2],t=a[0];a[0]=b[0];b[0]=t;
+      sortDay(n);renderBoard();renderDay(curDay);
+      toast.textContent="✨ วิเคราะห์พิกัด "+d.s.length+" จุดในวัน "+n+" — สลับลำดับช่วงกลางวัน ลดเดินย้อน ~1.2 กม. (ประหยัด ~40 นาที)";
+    }
+    toast.hidden=false;setTimeout(function(){toast.hidden=true},5000);
+  }
+
+  /* ---- Trip Recap ---- */
+  $("#openRecap").addEventListener("click",function(){
+    var st=tripStats();
+    $("#recapCard").innerHTML='<div class="rc-top">🐼 TRIP RECAP</div>'+
+      '<div class="rc-route">จางเจียเจี้ย ⟶ เฟิ่งหวง ⟶ ฝูหรง ⟶ ฉางซา</div>'+
+      '<div class="rc-dates num">'+dayDates[1]+' – '+dayDates[activeTrip.dayCount]+' · '+activeTrip.dayCount+' วัน '+(activeTrip.dayCount-1)+' คืน · '+esc(activeTrip.name)+'</div>'+
+      '<div class="rc-stats num"><div><b>'+st.c+'</b><span>จุดหมาย</span></div><div><b>¥'+fmt(journalState.spent)+'</b><span>ใช้จ่ายจริง</span></div><div><b>87,420</b><span>ก้าวเดินรวม</span></div><div><b>214</b><span>รูปถ่าย</span></div></div>'+
+      '<div class="rc-foot">สร้างด้วย GoPandaCN · เพื่อนแตะลิงก์เพื่อโหลดแผนทริปนี้ไปใช้ได้เลย 🐼</div>';
+    $("#recapMsg").textContent="";
+    $("#recapModal").classList.add("show");
+  });
+  $("#recapShare").addEventListener("click",function(){$("#recapMsg").textContent="✓ คัดลอกลิงก์แชร์แล้ว (เดโม)"});
+  $("#recapSave").addEventListener("click",function(){$("#recapMsg").textContent="✓ บันทึกรูปลงเครื่องแล้ว (เดโม)"});
+
+  /* ---- ไกด์เสียงป๋าโจ ---- */
+  var pinGuide={
+    ifs:"จุดนี้ต้องขึ้นลิฟต์ไปชั้นเจ็ดครับ ประติมากรรมหมีคอวส์อยู่บนดาดฟ้า ถ่ายรูปช่วงเย็นแสงสวยที่สุด และอย่าลืมลงชั้นใต้ดิน ของกินเพียบครับ",
+    orange:"เกาะส้มยาวห้ากิโลเมตรครับ แนะนำนั่งรถรางไปสุดเกาะ ชมรูปปั้นเหมาเจ๋อตงหนุ่ม แล้วเดินย้อนกลับช่วงพระอาทิตย์ตก วิวแม่น้ำเซียงสวยมากครับ",
+    pozi:"ถนนสายนี้อายุพันสองร้อยปีครับ เต้าหู้เหม็นดำต้องร้านฮั่วกงเตี้ยนเท่านั้น ต่อคิวหน่อยแต่คุ้ม ระวังกระเป๋าช่วงคนแน่นหลังหกโมงเย็นด้วยนะครับ",
+    yuelu:"ขาขึ้นแนะนำนั่งกระเช้าครับ เก็บแรงไว้เดินชมวิทยาลัยเยว่ลู่พันปีด้านล่าง ขาลงค่อยเดินเทรล ช่วงเช้าหมอกสวยอากาศดีครับ"
+  };
+  function speakTh(txt,btn){
+    if(!window.speechSynthesis)return;
+    if(speechSynthesis.speaking){speechSynthesis.cancel();btn.textContent="🎧 ไกด์เสียง";return}
+    var u=new SpeechSynthesisUtterance(txt);u.lang="th-TH";u.rate=1;
+    u.onend=function(){btn.textContent="🎧 ไกด์เสียง"};
+    btn.textContent="⏸ กำลังเล่าโดยป๋าโจ…";
+    speechSynthesis.speak(u);
+  }
+  $("#audioGuide").addEventListener("click",function(){speakTh(pinGuide[curPinId]||pinGuide.ifs,this)});
+
+  /* ---- เรทสดเมื่อออนไลน์ ---- */
+  $("#fxSync").addEventListener("click",function(){
+    var note=$("#fxNote");note.textContent="กำลังซิงก์เรท…";
+    setTimeout(function(){
+      RATE=4.83;
+      $("#fxRate").innerHTML='อัตรา <b>¥1 = ฿4.83</b> · เรทสด <span style="color:#6ee7b7">▼0.6%</span> จากเรทออฟไลน์ 4.86';
+      $$("#presets .preset").forEach(function(p){p.querySelector("span").textContent="฿"+fmt(p.dataset.cny*RATE)});
+      if(cny.value)thb.value=fmt(cny.value*RATE);
+      note.textContent="✓ อัปเดตเมื่อครู่ผ่าน Wi-Fi";
+    },900);
+  });
+
+  /* ---- โหมดประหยัดแบต + สถานะ GPS จริง (feature 1.3) ---- */
+  var geoState="requesting"; // requesting | ok | denied | unavailable
+  function gpsLabel(){
+    return geoState==="ok"?"GPS ✓":geoState==="denied"?"GPS ✗ ไม่ได้เปิดสิทธิ์":
+      geoState==="unavailable"?"GPS ✗ ไม่มีสัญญาณ":"กำลังหา GPS…";
+  }
+  function renderStatusChip(){
+    var eco=document.body.classList.contains("eco");
+    $("#statusChip").innerHTML=eco
+      ?"🔋 ประหยัดแบต · "+gpsLabel()+" ทุก 30 วิ"
+      :'<span class="offline-dot"></span><span class="long">ออฟไลน์พร้อมใช้&nbsp;·&nbsp;</span>'+gpsLabel();
+  }
+  $("#ecoToggle").addEventListener("click",function(){
+    var on=document.body.classList.toggle("eco");
+    this.classList.toggle("active",on);
+    renderStatusChip();
+  });
+
+  /* ---- จองแล้ว → ติ๊กเช็กลิสต์อัตโนมัติ ---- */
+  document.addEventListener("click",function(e){
+    var b=e.target.closest(".book-card,.bbook");
+    if(!b)return;
+    var label=b.classList.contains("bbook")?"รายการนี้":(b.querySelector("b")?b.querySelector("b").textContent:"ตั๋ว");
+    setTimeout(function(){
+      $("#bcText").textContent="เมื่อกี้จอง"+label+"สำเร็จไหมคะ?";
+      $("#bookConfirm").hidden=false;
+    },1200);
+  });
+  $("#bcYes").addEventListener("click",function(){
+    $("#bookConfirm").hidden=true;
+    var it=null;
+    checklist.forEach(function(c){c.items.forEach(function(x){if(/จองตั๋ว/.test(x.t))it=x})});
+    if(it&&!it.done){it.done=1;renderChecklist();updateReady();persistCurrentTrip();}
+    var toast=$("#planToast");
+    toast.textContent="✓ ติ๊ก “จองตั๋วล่วงหน้า” ในเช็กลิสต์ให้แล้ว — ความพร้อมตอนนี้ "+$("#readyPct").textContent;
+    toast.hidden=false;setTimeout(function(){toast.hidden=true},5000);
+  });
+  $("#bcNo").addEventListener("click",function(){$("#bookConfirm").hidden=true});
+
+  /* ---- หลายทริป: บันทึก/สลับ/ลบ ผ่าน localStorage ----
+     แต่ละทริปมีปฏิทินของตัวเอง (startDate+dayCount) — คำนวณ dayDates/dayDow ใหม่ทุกครั้งที่สลับทริป
+     ผ่าน applyCalendar() รองรับข้ามปีถูกต้อง (เช่นทริป 24 ธ.ค.–4 ม.ค. ข้ามปีใหม่) */
+  var TRIPS_KEY="gopanda_trips_v1",ACTIVE_KEY="gopanda_active_trip_v1";
+  function loadTripsList(){try{return JSON.parse(localStorage.getItem(TRIPS_KEY))||[]}catch(e){return[]}}
+  function saveTripsList(list){localStorage.setItem(TRIPS_KEY,JSON.stringify(list))}
+  // เติมฟิลด์ที่อาจขาดไปสำหรับทริปที่เคยบันทึกไว้ก่อนรอบอัปเดตนี้ (backward-compat)
+  function normalizeTrip(t){
+    return {
+      id:t.id,name:t.name,sub:t.sub||"",
+      startDate:t.startDate||"2026-09-12",
+      dayCount:t.dayCount||Object.keys(t.days||{}).length||10,
+      budget:t.budget||6000,
+      days:t.days,backlog:t.backlog||[],
+      journal:t.journal||{spent:0,entries:[]},
+      checklist:t.checklist||defaultChecklist(),
+      updatedAt:t.updatedAt||Date.now()
+    };
+  }
+  function persistCurrentTrip(){
+    var list=loadTripsList();
+    var idx=list.findIndex(function(t){return t.id===activeTrip.id});
+    var snap={id:activeTrip.id,name:activeTrip.name,sub:activeTrip.sub||"",
+      startDate:activeTrip.startDate,dayCount:activeTrip.dayCount,budget:activeTrip.budget,
+      days:days,backlog:backlog,journal:journalState,checklist:checklist,updatedAt:Date.now()};
+    if(idx>-1)list[idx]=snap;else list.push(snap);
+    saveTripsList(list);
+    localStorage.setItem(ACTIVE_KEY,activeTrip.id);
+  }
+  function computeCountdown(trip){
+    var start=new Date(trip.startDate+"T00:00:00");
+    var today=new Date();today.setHours(0,0,0,0);
+    var diffDays=Math.round((start-today)/86400000);
+    if(diffDays>0)return "อีก "+diffDays+" วัน";
+    if(diffDays===0)return "เดินทางวันนี้! 🎉";
+    if(diffDays>-trip.dayCount)return "กำลังเดินทาง ✈️";
+    return "ทริปผ่านไปแล้ว";
+  }
+  function renderTripCardMeta(){
+    var nameEl=$("#tripCityName"),subEl=$("#tripCitySub");
+    nameEl.childNodes[0].nodeValue=activeTrip.name+"\n            ";
+    subEl.textContent=activeTrip.sub||"ยังไม่มีรายละเอียดพื้นที่";
+    var dateRange=dayDates[1]+" – "+dayDates[activeTrip.dayCount];
+    var duration=activeTrip.dayCount+" วัน "+(activeTrip.dayCount-1)+" คืน";
+    $("#tripDateRange").textContent=dateRange;
+    $("#tripDuration").textContent=duration;
+    $("#tripCountdown").textContent=computeCountdown(activeTrip);
+    renderDayStrip();
+    titles.itin[1]="ทริป"+activeTrip.name+" · "+dateRange+" · "+duration;
+    if($("#view-itin").classList.contains("active"))$("#viewSub").textContent=titles.itin[1];
+  }
+  function switchToLiveData(days2,backlog2,journal2,checklist2){
+    days=days2;backlog=backlog2;curDay=1;
+    journalState=journal2||{spent:0,entries:[]};
+    checklist=checklist2||defaultChecklist();
+    applyCalendar(activeTrip);
+    renderBoard();renderDay(curDay);renderTripCardMeta();updateReady();
+    renderChecklist();renderJournalSummary();renderJournalEntries();
+  }
+  function switchTrip(id){
+    if(id===activeTrip.id){$("#tripsModal").classList.remove("show");return}
+    persistCurrentTrip();
+    var raw=loadTripsList().find(function(x){return x.id===id});
+    if(!raw)return;
+    var t=normalizeTrip(raw);
+    activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget};
+    switchToLiveData(t.days,t.backlog,t.journal,t.checklist);
+    $("#tripsModal").classList.remove("show");
+    var toast=$("#planToast");
+    toast.textContent="✓ สลับไปทริป \""+t.name+"\" แล้ว";toast.hidden=false;
+    setTimeout(function(){toast.hidden=true},4000);
+  }
+  function createTrip(name,startDate,dayCount,budget){
+    name=(name||"").trim();
+    dayCount=Math.max(1,Math.min(30,+dayCount||7));
+    budget=Math.max(0,+budget||0);
+    if(!name){$("#newTripName").focus();return}
+    if(!startDate){$("#newTripStart").focus();return}
+    persistCurrentTrip();
+    var id="trip-"+Date.now();
+    var blankDays={};
+    for(var n=1;n<=dayCount;n++)blankDays[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};
+    activeTrip={id:id,name:name,sub:"ทริปใหม่ — ยังไม่มีแผน",startDate:startDate,dayCount:dayCount,budget:budget};
+    switchToLiveData(blankDays,[],{spent:0,entries:[]},defaultChecklist());
+    persistCurrentTrip();
+    $("#newTripName").value="";
+    $("#tripsModal").classList.remove("show");
+    var toast=$("#planToast");
+    toast.textContent="✓ สร้างทริป \""+name+"\" ("+dayCount+" วัน) แล้ว เริ่มลากการ์ดจากคอลัมน์ไอเดีย หรือนำเข้าไฟล์ได้เลย";toast.hidden=false;
+    setTimeout(function(){toast.hidden=true},5000);
+  }
+  function deleteTrip(id){
+    var list=loadTripsList().filter(function(t){return t.id!==id});
+    saveTripsList(list);
+    if(activeTrip.id===id){
+      if(list.length){
+        var t=normalizeTrip(list[0]);
+        activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget};
+        switchToLiveData(t.days,t.backlog,t.journal,t.checklist);persistCurrentTrip();
+      }
+      else location.reload(); // ลบทริปสุดท้ายทิ้ง — โหลดดีโมเริ่มต้นใหม่สะอาด ๆ
+    }
+    renderTripsModalList();
+  }
+  function renderTripsModalList(){
+    persistCurrentTrip(); // ให้เห็นจำนวนวัน/เวลาแก้ไขล่าสุดตรงกับสถานะปัจจุบันเสมอตอนเปิดโมดัล
+    var list=loadTripsList();
+    $("#tripsList").innerHTML=list.map(function(t){
+      t=normalizeTrip(t);
+      var stopCount=Object.keys(t.days||{}).reduce(function(a,n){return a+((t.days[n].s||[]).length)},0);
+      var isActive=t.id===activeTrip.id;
+      var cal=computeCalendar(t.startDate,t.dayCount);
+      var dateRange=cal.dates[1]+" – "+cal.dates[t.dayCount];
+      return '<div class="modal-card" style="display:flex;align-items:center;justify-content:space-between;gap:10px'+
+        (isActive?';border-color:rgba(245,158,11,.5)':'')+'">'+
+        '<div style="min-width:0">'+'<b>'+esc(t.name)+'</b>'+(isActive?' <span class="prem-chip" style="font-size:.6rem">ปัจจุบัน</span>':'')+
+        '<div class="sub2" style="margin-top:2px">'+dateRange+' · '+t.dayCount+' วัน · '+stopCount+' จุดหมาย · แก้ไขล่าสุด '+new Date(t.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})+'</div></div>'+
+        '<div style="display:flex;gap:6px;flex:none">'+
+        (isActive?'':'<button class="btn-ghost" data-open-trip="'+t.id+'">เปิด</button>')+
+        '<button class="btn-ghost" data-del-trip="'+t.id+'">ลบ</button></div></div>';
+    }).join("")||'<div class="sub2">ยังไม่มีทริปบันทึกไว้</div>';
+  }
+  $("#openTrips").addEventListener("click",function(){
+    renderTripsModalList();
+    if(!$("#newTripStart").value)$("#newTripStart").value=new Date().toISOString().slice(0,10);
+    $("#tripsModal").classList.add("show");
+  });
+  $("#tripsModal").addEventListener("click",function(e){
+    var openBtn=e.target.closest("[data-open-trip]"),delBtn=e.target.closest("[data-del-trip]");
+    if(openBtn){switchTrip(openBtn.dataset.openTrip);return}
+    if(delBtn){deleteTrip(delBtn.dataset.delTrip);return}
+    if(!e.target.closest(".picker-panel"))$("#tripsModal").classList.remove("show");
+  });
+  $("#createTripBtn").addEventListener("click",function(){
+    createTrip($("#newTripName").value,$("#newTripStart").value,$("#newTripDays").value,$("#newTripBudget").value);
+  });
+  $("#newTripName").addEventListener("keydown",function(e){
+    if(e.key==="Enter")createTrip($("#newTripName").value,$("#newTripStart").value,$("#newTripDays").value,$("#newTripBudget").value);
+  });
+  (function initTrips(){
+    var list=loadTripsList();
+    if(!list.length){
+      // ครั้งแรกที่เปิดแอป — เซฟข้อมูลดีโมที่ hardcode ไว้เป็นทริป "default" ทริปแรกในรายการ
+      persistCurrentTrip();
+      renderTripCardMeta();
+      renderJournalSummary();renderJournalEntries();
+      return;
+    }
+    var lastActiveId=localStorage.getItem(ACTIVE_KEY);
+    var raw=list.find(function(x){return x.id===lastActiveId})||list[0];
+    var t=normalizeTrip(raw);
+    activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget};
+    switchToLiveData(t.days,t.backlog,t.journal,t.checklist);
+  })();
+  window.addEventListener("beforeunload",persistCurrentTrip); // กันลืมบันทึกก่อนปิด/รีเฟรชแท็บ
+})();
+</script>
+<script>
+  // ---- PWA (feature 1.1): ติดตั้ง service worker เพื่อให้เปิดออฟไลน์ได้ทั้งแอป ----
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",function(){
+      navigator.serviceWorker.register("sw.js").catch(function(err){
+        console.warn("ลงทะเบียน service worker ไม่สำเร็จ:",err);
+      });
+    });
+  }
+</script>

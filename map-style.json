@@ -1,0 +1,90 @@
+{
+  "version": 8,
+  "name": "GoPandaCN Dark",
+  "glyphs": "fonts/{fontstack}/{range}.pbf",
+  "sources": {
+    "changsha": {
+      "type": "vector",
+      "url": "pmtiles://tiles/changsha.pmtiles",
+      "attribution": "© OpenStreetMap contributors"
+    }
+  },
+  "layers": [
+    { "id": "bg", "type": "background", "paint": { "background-color": "#0a1324" } },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "changsha", "source-layer": "water",
+      "paint": { "fill-color": "#0d2438", "fill-outline-color": "#164e63" }
+    },
+    {
+      "id": "water-line",
+      "type": "line",
+      "source": "changsha", "source-layer": "water",
+      "paint": { "line-color": "#164e63", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.8, 16, 3] }
+    },
+    {
+      "id": "landuse-park",
+      "type": "fill",
+      "source": "changsha", "source-layer": "landuse",
+      "paint": { "fill-color": "#10261e", "fill-opacity": 0.9 }
+    },
+    {
+      "id": "buildings",
+      "type": "fill",
+      "source": "changsha", "source-layer": "buildings",
+      "minzoom": 14,
+      "paint": {
+        "fill-color": "#2c4064",
+        "fill-outline-color": "#5870aa",
+        "fill-opacity": ["interpolate", ["linear"], ["zoom"], 14, 0.65, 16, 0.95]
+      }
+    },
+    {
+      "id": "roads-casing",
+      "type": "line",
+      "source": "changsha", "source-layer": "roads",
+      "paint": {
+        "line-color": ["match", ["get", "class"],
+          ["motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link"], "#3d5c8c",
+          ["secondary", "secondary_link", "tertiary", "tertiary_link"], "#2e4568",
+          "#243450"],
+        "line-width": ["interpolate", ["linear"], ["zoom"],
+          11, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 2, 1],
+          16, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 10, ["secondary", "tertiary"], 7, 4]]
+      }
+    },
+    {
+      "id": "roads-line",
+      "type": "line",
+      "source": "changsha", "source-layer": "roads",
+      "paint": {
+        "line-color": ["match", ["get", "class"],
+          ["motorway", "motorway_link", "trunk", "trunk_link", "primary", "primary_link"], "#a9c4ee",
+          ["secondary", "secondary_link", "tertiary", "tertiary_link"], "#7896c2",
+          "#4a6285"],
+        "line-width": ["interpolate", ["linear"], ["zoom"],
+          11, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 0.8, 0.4],
+          16, ["match", ["get", "class"], ["motorway", "trunk", "primary"], 5, ["secondary", "tertiary"], 3, 1.5]]
+      }
+    },
+    {
+      "id": "roads-label",
+      "type": "symbol",
+      "source": "changsha", "source-layer": "roads",
+      "minzoom": 14,
+      "filter": ["has", "name"],
+      "layout": {
+        "symbol-placement": "line",
+        "text-field": ["get", "name"],
+        "text-font": ["Noto Sans SC"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 14, 10, 18, 13]
+      },
+      "paint": {
+        "text-color": "#e2e8f0",
+        "text-halo-color": "#0a1324",
+        "text-halo-width": 1.2
+      }
+    }
+  ]
+}
