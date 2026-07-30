@@ -270,7 +270,7 @@
   .stop-card{
     border:1px solid var(--border);border-radius:14px;background:var(--panel);
     padding:13px 15px;display:flex;gap:12px;align-items:flex-start;
-    transition:border-color .2s,transform .2s;
+    transition:border-color .2s,transform .2s;cursor:pointer;
   }
   .stop-card:hover{border-color:rgba(245,158,11,.4);transform:translateX(3px)}
   .stop-time{flex:none;font-weight:700;color:var(--gold-2);font-size:.85rem;min-width:48px}
@@ -944,7 +944,7 @@
           <span class="sub num" id="itinMeta">5 จุดหมาย · เดินรวม 4.2 กม.</span>
         </div>
         <div class="timeline" id="timeline"></div>
-        <button class="add-stop">＋ เพิ่มจุดหมายในวันนี้</button>
+        <button class="add-stop" id="addStopBtn">＋ เพิ่มจุดหมายในวันนี้</button>
       </section>
 
       <!-- ---------- JOURNAL ---------- -->
@@ -1326,6 +1326,47 @@
     </div>
   </div>
 
+  <div class="picker" id="stopModal" role="dialog" aria-label="เพิ่ม/แก้ไขจุดหมาย">
+    <div class="picker-panel" style="width:min(480px,100%)">
+      <h3 id="stopModalTitle">➕ เพิ่มจุดหมาย</h3>
+      <div class="sub2">แก้แผนวันนี้ได้เลย — บันทึกไว้ในเครื่องนี้ทันที</div>
+      <div class="modal-card">
+        <div class="trip-form-row">
+          <label>เวลา
+            <input type="time" id="stopTime" class="tf-text">
+          </label>
+          <label>หมวด
+            <select id="stopCat" class="tf-text">
+              <option value="ที่เที่ยว">ที่เที่ยว</option>
+              <option value="อาหาร">อาหาร</option>
+              <option value="เดินทาง">เดินทาง</option>
+              <option value="ที่พัก">ที่พัก</option>
+            </select>
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">สถานที่
+            <input type="text" id="stopPlace" class="tf-text" placeholder="เช่น 🏮 ถนนโผจื่อเจีย">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">รายละเอียด
+            <input type="text" id="stopDesc" class="tf-text" placeholder="เช่น เต้าหู้เหม็นดำฮั่วกงเตี้ยน">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label>งบ (¥, ไม่ใส่ก็ได้)
+            <input type="number" id="stopBudget" class="tf-text" min="0" step="1">
+          </label>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn-ghost" id="stopDeleteBtn" style="display:none;color:#f87171;border-color:#f87171">🗑️ ลบจุดนี้</button>
+          <button class="btn-gold" id="stopSaveBtn" style="flex:1;justify-content:center">บันทึก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="picker" id="premModal" role="dialog" aria-label="GoPanda Premium">
     <div class="picker-panel" style="width:min(500px,100%)">
       <h3>✨ GoPanda Premium</h3>
@@ -1620,11 +1661,11 @@
     }
     $("#itinTitle").innerHTML="วัน "+n+" · <em>"+d.t+"</em>";
     $("#itinMeta").textContent=d.m;
-    tl.innerHTML=d.s.map(function(s){
-      return '<div class="stop"><div class="stop-card">'+
-        '<div class="stop-time num">'+s[0]+'</div>'+
-        '<div class="stop-body"><h4>'+s[1]+'</h4><p>'+s[2]+'</p>'+
-        '<span class="tag '+s[3][0]+'">'+s[3][1]+'</span>'+
+    tl.innerHTML=d.s.map(function(s,idx){
+      return '<div class="stop"><div class="stop-card" data-idx="'+idx+'" role="button" tabindex="0" aria-label="แก้ไขจุดหมายนี้">'+
+        '<div class="stop-time num">'+esc(s[0])+'</div>'+
+        '<div class="stop-body"><h4>'+esc(s[1])+'</h4><p>'+esc(s[2])+'</p>'+
+        '<span class="tag '+s[3][0]+'">'+esc(s[3][1])+'</span>'+
         (s[4]?'<span class="tag cost num">¥'+s[4]+'</span>':'')+'</div></div></div>';
     }).join("");
   }
@@ -1645,6 +1686,57 @@
     $$(".day-chip",$("#dayStrip")).forEach(function(x){x.classList.remove("active")});
     c.classList.add("active");
     renderDay(+c.dataset.day);
+  });
+
+  /* ---- เพิ่ม/แก้ไข/ลบจุดหมายในแผนรายวัน ---- */
+  var stopEditCtx=null; // {day,idx} — idx เป็น null เมื่อกำลังเพิ่มใหม่
+  function openStopModal(dayNum,idx){
+    var d=getDay(dayNum);
+    var s=(idx!=null)?d.s[idx]:null;
+    stopEditCtx={day:dayNum,idx:idx};
+    $("#stopModalTitle").textContent=s?"✏️ แก้ไขจุดหมาย":"➕ เพิ่มจุดหมาย";
+    $("#stopTime").value=(s&&s[0]!=="--")?s[0]:"";
+    $("#stopPlace").value=s?s[1]:"";
+    $("#stopDesc").value=s?s[2]:"";
+    $("#stopCat").value=s?s[3][1]:"ที่เที่ยว";
+    $("#stopBudget").value=(s&&s[4])?s[4]:"";
+    $("#stopDeleteBtn").style.display=s?"":"none";
+    $("#stopModal").classList.add("show");
+    $("#stopPlace").focus();
+  }
+  function closeStopModal(){$("#stopModal").classList.remove("show");stopEditCtx=null}
+  $("#addStopBtn").addEventListener("click",function(){openStopModal(curDay,null)});
+  $("#timeline").addEventListener("click",function(e){
+    var card=e.target.closest(".stop-card[data-idx]");if(!card)return;
+    openStopModal(curDay,+card.dataset.idx);
+  });
+  $("#timeline").addEventListener("keydown",function(e){
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    var card=e.target.closest(".stop-card[data-idx]");if(!card)return;
+    e.preventDefault();openStopModal(curDay,+card.dataset.idx);
+  });
+  $("#stopModal").addEventListener("click",function(e){
+    if(!e.target.closest(".picker-panel"))closeStopModal();
+  });
+  $("#stopSaveBtn").addEventListener("click",function(){
+    var place=$("#stopPlace").value.trim();
+    if(!place){$("#stopPlace").focus();return}
+    var catLabel=$("#stopCat").value;
+    var budget=$("#stopBudget").value?Number($("#stopBudget").value):null;
+    var entry=[$("#stopTime").value||"--",place,$("#stopDesc").value.trim(),catMap[catLabel]||["spot","ที่เที่ยว"],budget];
+    var d=getDay(stopEditCtx.day);
+    if(stopEditCtx.idx!=null)d.s[stopEditCtx.idx]=entry;else d.s.push(entry);
+    sortDay(stopEditCtx.day);
+    persistCurrentTrip();
+    renderBoard();renderDay(stopEditCtx.day);renderDayStrip();
+    closeStopModal();
+  });
+  $("#stopDeleteBtn").addEventListener("click",function(){
+    var d=getDay(stopEditCtx.day);
+    d.s.splice(stopEditCtx.idx,1);
+    persistCurrentTrip();
+    renderBoard();renderDay(stopEditCtx.day);renderDayStrip();
+    closeStopModal();
   });
 
   /* ---- chat: หลิงหลิง Router ชั้น 1 (engine เดียวกับ POC — ตอบจากแพ็กจริง) ---- */
