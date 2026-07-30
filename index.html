@@ -1079,14 +1079,14 @@
           <div class="med-card">
             <div class="med-head">
               <span class="label">บัตรสุขภาพฉุกเฉิน · 医疗卡</span>
-              <button class="btn-ghost" style="padding:5px 12px;font-size:.7rem">แก้ไข</button>
+              <button class="btn-ghost" id="medEditBtn" style="padding:5px 12px;font-size:.7rem">แก้ไข</button>
             </div>
-            <b class="med-name">นายโจ ใจดี · MR. JOE JAIDEE</b>
-            <div class="med-row"><span class="k">กรุ๊ปเลือด</span><span class="v num">O+</span><span class="c">血型 O型 RH阳性</span></div>
-            <div class="med-row"><span class="k">แพ้ยา</span><span class="v">เพนิซิลลิน (Penicillin)</span><span class="c">对青霉素过敏</span></div>
-            <div class="med-row"><span class="k">โรคประจำตัว</span><span class="v">ความดันโลหิตสูง</span><span class="c">高血压</span></div>
-            <div class="med-row"><span class="k">ยาที่ใช้</span><span class="v">Amlodipine 5mg (เช้า)</span><span class="c">每天早上服用氨氯地平</span></div>
-            <div class="med-row"><span class="k">ติดต่อฉุกเฉิน</span><span class="v num">คุณหมวย (ภรรยา) +66 89 123 4567</span><span class="c">紧急联系人（妻子）</span></div>
+            <b class="med-name" id="medName">นายโจ ใจดี · MR. JOE JAIDEE</b>
+            <div class="med-row"><span class="k">กรุ๊ปเลือด</span><span class="v num" id="medBloodV">O+</span><span class="c" id="medBloodC">血型 O型 RH阳性</span></div>
+            <div class="med-row"><span class="k">แพ้ยา</span><span class="v" id="medAllergyV">เพนิซิลลิน (Penicillin)</span></div>
+            <div class="med-row"><span class="k">โรคประจำตัว</span><span class="v" id="medConditionV">ความดันโลหิตสูง</span></div>
+            <div class="med-row"><span class="k">ยาที่ใช้</span><span class="v" id="medMedsV">Amlodipine 5mg (เช้า)</span></div>
+            <div class="med-row"><span class="k">ติดต่อฉุกเฉิน</span><span class="v num" id="medContactV">คุณหมวย (ภรรยา) +66 89 123 4567</span></div>
             <button class="btn-gold" id="sosShowMed" style="margin-top:14px;align-self:flex-start">🪧 ขยายโชว์หมอ / กู้ภัย</button>
           </div>
         </div>
@@ -1240,7 +1240,91 @@
       <h3>🚕 จะให้พาไปไหนครับ?</h3>
       <div class="sub2">เลือกสถานที่ แล้วหันจอให้คนขับ DiDi/แท็กซี่ดูได้เลย — ใช้งานออฟไลน์</div>
       <div id="placeList" style="display:flex;flex-direction:column;gap:8px"></div>
-      <button class="add-stop" style="margin:4px 0 0;width:100%">＋ เพิ่มสถานที่ของฉัน</button>
+      <button class="add-stop" id="addPlaceBtn" style="margin:4px 0 0;width:100%">＋ เพิ่มสถานที่ของฉัน</button>
+    </div>
+  </div>
+
+  <div class="picker" id="addPlaceModal" role="dialog" aria-label="เพิ่มสถานที่ของฉัน">
+    <div class="picker-panel" style="width:min(480px,100%)">
+      <h3>➕ เพิ่มสถานที่ของฉัน</h3>
+      <div class="sub2">เก็บไว้ในเครื่องนี้ — โชว์ให้คนขับ/แท็กซี่ดูได้ทันทีแบบออฟไลน์</div>
+      <div class="modal-card">
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">ชื่อสถานที่ (ภาษาไทย)
+            <input type="text" id="apTh" class="tf-text" placeholder="เช่น โรงแรมที่พักคืนนี้">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">ชื่อสถานที่ (ภาษาจีน) — ให้คนขับอ่าน
+            <input type="text" id="apCn" class="tf-text" placeholder="เช่น 长沙璞境酒店">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">ที่อยู่ (ภาษาจีน)
+            <input type="text" id="apAddr" class="tf-text" placeholder="เช่น 雨花区高桥北地铁站旁">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label>พินอิน (ไม่ใส่ก็ได้)
+            <input type="text" id="apPy" class="tf-text" placeholder="Pújìng Jiǔdiàn">
+          </label>
+          <label>เบอร์โทร (ไม่ใส่ก็ได้)
+            <input type="text" id="apTel" class="tf-text">
+          </label>
+        </div>
+        <button class="btn-gold" id="apSaveBtn" style="width:100%;margin-top:10px;justify-content:center">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="picker" id="medModal" role="dialog" aria-label="แก้ไขบัตรสุขภาพฉุกเฉิน">
+    <div class="picker-panel" style="width:min(480px,100%)">
+      <h3>🩺 แก้ไขบัตรสุขภาพฉุกเฉิน</h3>
+      <div class="sub2">เก็บไว้ในเครื่องนี้เท่านั้น ไม่ส่งไปที่ไหน — ใส่ข้อมูลจริงของคุณเพื่อความปลอดภัย</div>
+      <div class="modal-card">
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">ชื่อ-นามสกุล (ไทย/อังกฤษ)
+            <input type="text" id="medFName" class="tf-text" placeholder="เช่น นายโจ ใจดี · MR. JOE JAIDEE">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label>กรุ๊ปเลือด
+            <select id="medFBlood" class="tf-text">
+              <option value="">ไม่ทราบ / ไม่ใส่</option>
+              <option value="A+">A+</option><option value="A-">A-</option>
+              <option value="B+">B+</option><option value="B-">B-</option>
+              <option value="AB+">AB+</option><option value="AB-">AB-</option>
+              <option value="O+">O+</option><option value="O-">O-</option>
+            </select>
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">แพ้ยา/แพ้อาหาร (ไม่มีก็ปล่อยว่าง)
+            <input type="text" id="medFAllergy" class="tf-text" placeholder="เช่น เพนิซิลลิน (Penicillin)">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">โรคประจำตัว (ไม่มีก็ปล่อยว่าง)
+            <input type="text" id="medFCondition" class="tf-text" placeholder="เช่น ความดันโลหิตสูง">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">ยาที่ใช้ประจำ (ไม่มีก็ปล่อยว่าง)
+            <input type="text" id="medFMeds" class="tf-text" placeholder="เช่น Amlodipine 5mg (เช้า)">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">ผู้ติดต่อฉุกเฉิน (ชื่อ+ความสัมพันธ์)
+            <input type="text" id="medFContactName" class="tf-text" placeholder="เช่น คุณหมวย (ภรรยา)">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">เบอร์โทรผู้ติดต่อฉุกเฉิน
+            <input type="tel" id="medFContactTel" class="tf-text" placeholder="+66 89 123 4567">
+          </label>
+        </div>
+        <button class="btn-gold" id="medSaveBtn" style="width:100%;margin-top:10px;justify-content:center">บันทึก</button>
+      </div>
     </div>
   </div>
 
@@ -2124,11 +2208,22 @@
     {ic:"🚄",th:"สถานีรถไฟจางเจียเจี้ยตะวันตก",cn:"张家界西站",addr:"永定区沙堤街道",py:"Zhāngjiājiè Xī Zhàn",tel:""},
     {ic:"✈️",th:"สนามบินหวงฮวา อาคาร T2",cn:"长沙黄花国际机场 T2航站楼",addr:"长沙县机场大道",py:"Huánghuā Jīchǎng",tel:""}
   ];
+  var CUSTOM_PLACES_KEY="gopanda_custom_places_v1";
+  (function loadCustomPlaces(){
+    try{
+      var saved=JSON.parse(localStorage.getItem(CUSTOM_PLACES_KEY)||"[]");
+      saved.forEach(function(p){places.push(p)});
+    }catch(e){/* ข้อมูลเสีย — ข้ามไปเงียบๆ ไม่ให้แอปพังเพราะ localStorage เพี้ยน */}
+  })();
+  function saveCustomPlaces(){
+    var custom=places.filter(function(p){return p.custom});
+    localStorage.setItem(CUSTOM_PLACES_KEY,JSON.stringify(custom));
+  }
   var placePick=$("#placePick"),driverShow=$("#driverShow"),drvSpeakTxt="";
   function renderPlaces(){
     $("#placeList").innerHTML=places.map(function(p,i){
       return '<button class="place-btn" data-i="'+i+'"><span class="ic2">'+p.ic+'</span>'+
-        '<span><b>'+p.th+'</b><span>'+p.cn+(p.tel?' · ☎ '+p.tel:'')+'</span></span></button>';
+        '<span><b>'+esc(p.th)+'</b><span>'+esc(p.cn)+(p.tel?' · ☎ '+esc(p.tel):'')+'</span></span></button>';
     }).join("");
   }
   function openDriverCard(p){
@@ -2160,7 +2255,74 @@
   });
   $("#drvSpeak").addEventListener("click",function(e){e.stopPropagation();speakCn(drvSpeakTxt)});
 
-  /* ---- SOS page ---- */
+  /* ---- เพิ่มสถานที่ของฉัน (บันทึกในเครื่อง ใช้กับการ์ดคนขับได้ทันที) ---- */
+  $("#addPlaceBtn").addEventListener("click",function(){
+    ["apTh","apCn","apAddr","apPy","apTel"].forEach(function(id){$("#"+id).value=""});
+    $("#addPlaceModal").classList.add("show");
+    $("#apTh").focus();
+  });
+  $("#addPlaceModal").addEventListener("click",function(e){
+    if(!e.target.closest(".picker-panel"))$("#addPlaceModal").classList.remove("show");
+  });
+  $("#apSaveBtn").addEventListener("click",function(){
+    var th=$("#apTh").value.trim(),cn=$("#apCn").value.trim();
+    if(!th){$("#apTh").focus();return}
+    if(!cn){$("#apCn").focus();return}
+    places.push({ic:"📍",th:th,cn:cn,addr:$("#apAddr").value.trim(),py:$("#apPy").value.trim(),tel:$("#apTel").value.trim(),custom:true});
+    saveCustomPlaces();
+    renderPlaces();
+    $("#addPlaceModal").classList.remove("show");
+  });
+
+  /* ---- SOS page: บัตรสุขภาพฉุกเฉิน (แก้ไขได้จริง เก็บในเครื่องเท่านั้น) ---- */
+  // กรุ๊ปเลือดเป็นชุดจำกัด (8 ค่า) แปลจีนได้แม่นยำ 100% — ต่างจากแพ้ยา/โรคประจำตัว/ยา
+  // ที่เป็น free text ผู้ใช้พิมพ์เอง แปลอัตโนมัติแม่นๆ ไม่ได้ (เสี่ยงอันตรายถ้าแปลผิดตอนฉุกเฉินจริง)
+  // เลยโชว์เป็นภาษาไทย/อังกฤษ+label ภาษาอังกฤษกำกับ แทนการเดี้ยงแปลเป็นจีนเอง
+  var BLOOD_CN={"A+":"A型 RH阳性","A-":"A型 RH阴性","B+":"B型 RH阳性","B-":"B型 RH阴性","AB+":"AB型 RH阳性","AB-":"AB型 RH阴性","O+":"O型 RH阳性","O-":"O型 RH阴性"};
+  var MED_PROFILE_KEY="gopanda_med_profile_v1";
+  var medProfile=(function(){
+    try{
+      var saved=JSON.parse(localStorage.getItem(MED_PROFILE_KEY));
+      if(saved)return saved;
+    }catch(e){/* ข้อมูลเสีย — ใช้ค่าเริ่มต้นแทน */}
+    return {name:"นายโจ ใจดี · MR. JOE JAIDEE",blood:"O+",allergy:"เพนิซิลลิน (Penicillin)",
+      condition:"ความดันโลหิตสูง",meds:"Amlodipine 5mg (เช้า)",contactName:"คุณหมวย (ภรรยา)",contactTel:"+66 89 123 4567"};
+  })();
+  function renderMedCard(){
+    $("#medName").textContent=medProfile.name||"—";
+    $("#medBloodV").textContent=medProfile.blood||"ไม่ทราบ";
+    $("#medBloodC").textContent=medProfile.blood?("血型 "+BLOOD_CN[medProfile.blood]):"";
+    $("#medAllergyV").textContent=medProfile.allergy||"ไม่มี";
+    $("#medConditionV").textContent=medProfile.condition||"ไม่มี";
+    $("#medMedsV").textContent=medProfile.meds||"ไม่มี";
+    $("#medContactV").textContent=[medProfile.contactName,medProfile.contactTel].filter(Boolean).join(" ")||"—";
+  }
+  renderMedCard();
+  $("#medEditBtn").addEventListener("click",function(){
+    $("#medFName").value=medProfile.name||"";
+    $("#medFBlood").value=medProfile.blood||"";
+    $("#medFAllergy").value=medProfile.allergy||"";
+    $("#medFCondition").value=medProfile.condition||"";
+    $("#medFMeds").value=medProfile.meds||"";
+    $("#medFContactName").value=medProfile.contactName||"";
+    $("#medFContactTel").value=medProfile.contactTel||"";
+    $("#medModal").classList.add("show");
+  });
+  $("#medModal").addEventListener("click",function(e){
+    if(!e.target.closest(".picker-panel"))$("#medModal").classList.remove("show");
+  });
+  $("#medSaveBtn").addEventListener("click",function(){
+    medProfile={
+      name:$("#medFName").value.trim(),blood:$("#medFBlood").value,
+      allergy:$("#medFAllergy").value.trim(),condition:$("#medFCondition").value.trim(),
+      meds:$("#medFMeds").value.trim(),
+      contactName:$("#medFContactName").value.trim(),contactTel:$("#medFContactTel").value.trim()
+    };
+    localStorage.setItem(MED_PROFILE_KEY,JSON.stringify(medProfile));
+    renderMedCard();
+    $("#medModal").classList.remove("show");
+  });
+
   $("#sosDriverHome").addEventListener("click",function(){openDriverCard(places[0])});
   $("#sosShowLoc").addEventListener("click",function(){
     openInfoCard({
@@ -2172,12 +2334,19 @@
     });
   });
   $("#sosShowMed").addEventListener("click",function(){
+    var bloodTitle=medProfile.blood?('血型 '+esc(medProfile.blood)+'（'+BLOOD_CN[medProfile.blood]+'）'):'—';
+    var lines=[
+      medProfile.allergy?('Allergy 过敏: '+esc(medProfile.allergy)):"",
+      medProfile.condition?('Condition 病史: '+esc(medProfile.condition)):"",
+      medProfile.meds?('Medication 用药: '+esc(medProfile.meds)):"",
+      (medProfile.contactName||medProfile.contactTel)?('Emergency contact 紧急联系人: '+esc(medProfile.contactName)+' '+esc(medProfile.contactTel)):""
+    ].filter(Boolean);
     openInfoCard({
       head:'我需要帮助！医疗信息 <small>(ฉันต้องการความช่วยเหลือ — ข้อมูลสุขภาพ)</small>',
-      title:'血型 O+ · 对青霉素过敏',
-      lines:['患有高血压 · 服用氨氯地平 5mg','紧急联系人（妻子）+66 89 123 4567'],
-      thai:'กรุ๊ปเลือด O+ · แพ้เพนิซิลลิน · ความดันสูง · ยา Amlodipine 5mg เช้า',
-      speak:'我需要帮助。我的血型是O型，对青霉素过敏，患有高血压。'
+      title:bloodTitle,
+      lines:lines,
+      thai:[medProfile.blood&&("กรุ๊ปเลือด "+medProfile.blood),medProfile.allergy&&("แพ้ "+medProfile.allergy),medProfile.condition,medProfile.meds].filter(Boolean).join(" · "),
+      speak:'我需要帮助。'+(medProfile.blood?('我的血型是'+medProfile.blood+'。'):'')
     });
   });
   $("#sosInsurance").addEventListener("click",function(){showView("ready")});
@@ -2789,18 +2958,82 @@
   }
 
   /* ---- Trip Recap ---- */
+  // ก้าวเดิน/จำนวนรูปถ่ายเคยเป็นเลขปลอม hardcode ไว้ (87,420 ก้าว, 214 รูป) — PWA อ่านค่าจริง
+  // จากเซนเซอร์เดินนับก้าว/คลังรูปเครื่องไม่ได้ (ต้องมี native app จริงถึงจะทำได้) เลยตัดออก
+  // ใช้สถิติที่คำนวณได้จริงจากข้อมูลทริปแทน (จุดหมาย/งบ/วัน ล้วนมาจาก tripStats()+journalState จริง)
+  function recapSummaryText(st){
+    return "🐼 "+activeTrip.name+" · "+dayDates[1]+"–"+dayDates[activeTrip.dayCount]+
+      " ("+activeTrip.dayCount+" วัน "+(activeTrip.dayCount-1)+" คืน)\n"+
+      (activeTrip.sub?activeTrip.sub+"\n":"")+
+      st.c+" จุดหมาย · ใช้จ่ายจริง ¥"+fmt(journalState.spent)+" · งบที่วางแผน ¥"+fmt(st.total)+
+      "\nวางแผนด้วย GoPandaCN 🐼";
+  }
   $("#openRecap").addEventListener("click",function(){
     var st=tripStats();
     $("#recapCard").innerHTML='<div class="rc-top">🐼 TRIP RECAP</div>'+
-      '<div class="rc-route">จางเจียเจี้ย ⟶ เฟิ่งหวง ⟶ ฝูหรง ⟶ ฉางซา</div>'+
+      '<div class="rc-route">'+esc(activeTrip.sub||activeTrip.name)+'</div>'+
       '<div class="rc-dates num">'+dayDates[1]+' – '+dayDates[activeTrip.dayCount]+' · '+activeTrip.dayCount+' วัน '+(activeTrip.dayCount-1)+' คืน · '+esc(activeTrip.name)+'</div>'+
-      '<div class="rc-stats num"><div><b>'+st.c+'</b><span>จุดหมาย</span></div><div><b>¥'+fmt(journalState.spent)+'</b><span>ใช้จ่ายจริง</span></div><div><b>87,420</b><span>ก้าวเดินรวม</span></div><div><b>214</b><span>รูปถ่าย</span></div></div>'+
+      '<div class="rc-stats num"><div><b>'+st.c+'</b><span>จุดหมาย</span></div><div><b>¥'+fmt(journalState.spent)+'</b><span>ใช้จ่ายจริง</span></div><div><b>¥'+fmt(st.total)+'</b><span>งบที่วางแผน</span></div><div><b>'+activeTrip.dayCount+'</b><span>วัน</span></div></div>'+
       '<div class="rc-foot">สร้างด้วย GoPandaCN · เพื่อนแตะลิงก์เพื่อโหลดแผนทริปนี้ไปใช้ได้เลย 🐼</div>';
     $("#recapMsg").textContent="";
     $("#recapModal").classList.add("show");
   });
-  $("#recapShare").addEventListener("click",function(){$("#recapMsg").textContent="✓ คัดลอกลิงก์แชร์แล้ว (เดโม)"});
-  $("#recapSave").addEventListener("click",function(){$("#recapMsg").textContent="✓ บันทึกรูปลงเครื่องแล้ว (เดโม)"});
+  $("#recapShare").addEventListener("click",function(){
+    var st=tripStats(),text=recapSummaryText(st);
+    if(navigator.share){
+      navigator.share({title:"GoPandaCN Trip Recap",text:text}).then(function(){
+        $("#recapMsg").textContent="✓ แชร์แล้ว";
+      }).catch(function(e){
+        if(e.name!=="AbortError")$("#recapMsg").textContent="✗ แชร์ไม่สำเร็จ: "+e.message;
+      });
+    }else if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        $("#recapMsg").textContent="✓ คัดลอกสรุปทริปแล้ว (เครื่องนี้ไม่รองรับแชร์โดยตรง วางไปแปะที่แชทเพื่อนได้เลย)";
+      }).catch(function(e){
+        $("#recapMsg").textContent="✗ คัดลอกไม่สำเร็จ: "+e.message;
+      });
+    }else{
+      $("#recapMsg").textContent="✗ เบราว์เซอร์นี้ไม่รองรับการแชร์/คัดลอกอัตโนมัติ";
+    }
+  });
+  $("#recapSave").addEventListener("click",function(){
+    var st=tripStats();
+    var cv=document.createElement("canvas");cv.width=900;cv.height=560;
+    var ctx=cv.getContext("2d");
+    ctx.fillStyle="#0f172a";ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle="#1a2a4a";ctx.fillRect(0,0,cv.width,90);
+    ctx.fillStyle="#f5c26b";ctx.font="700 22px sans-serif";ctx.fillText("🐼 GOPANDACN · TRIP RECAP",40,55);
+    ctx.fillStyle="#fff";ctx.font="700 40px sans-serif";
+    wrapText(ctx,activeTrip.sub||activeTrip.name,40,160,820,46);
+    ctx.fillStyle="#94a3b8";ctx.font="20px sans-serif";
+    ctx.fillText(dayDates[1]+" – "+dayDates[activeTrip.dayCount]+" · "+activeTrip.dayCount+" วัน "+(activeTrip.dayCount-1)+" คืน · "+activeTrip.name,40,300);
+    var stats=[[st.c,"จุดหมาย"],["¥"+fmt(journalState.spent),"ใช้จ่ายจริง"],["¥"+fmt(st.total),"งบที่วางแผน"],[activeTrip.dayCount,"วัน"]];
+    stats.forEach(function(s,i){
+      var x=40+i*210;
+      ctx.fillStyle="#f5c26b";ctx.font="700 30px sans-serif";ctx.fillText(String(s[0]),x,400);
+      ctx.fillStyle="#94a3b8";ctx.font="16px sans-serif";ctx.fillText(s[1],x,428);
+    });
+    ctx.strokeStyle="#334155";ctx.beginPath();ctx.moveTo(40,470);ctx.lineTo(860,470);ctx.stroke();
+    ctx.fillStyle="#64748b";ctx.font="14px sans-serif";
+    ctx.fillText("วางแผนด้วย GoPandaCN 🐼 — แอปนำเที่ยวจีนออฟไลน์สำหรับคนไทย",40,500);
+    cv.toBlob(function(blob){
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement("a");
+      a.href=url;a.download="gopanda-recap-"+activeTrip.id+".png";
+      document.body.appendChild(a);a.click();a.remove();
+      URL.revokeObjectURL(url);
+      $("#recapMsg").textContent="✓ บันทึกรูปแล้ว";
+    },"image/png");
+  });
+  function wrapText(ctx,text,x,y,maxWidth,lineHeight){
+    var words=text.split(" "),line="",lines=[];
+    words.forEach(function(w){
+      var test=line?line+" "+w:w;
+      if(ctx.measureText(test).width>maxWidth&&line){lines.push(line);line=w}else{line=test}
+    });
+    lines.push(line);
+    lines.slice(0,2).forEach(function(l,i){ctx.fillText(l,x,y+i*lineHeight)});
+  }
 
   /* ---- ไกด์เสียงป๋าโจ ---- */
   var pinGuide={
