@@ -6,6 +6,8 @@
     "changsha": {
       "type": "vector",
       "url": "pmtiles://tiles/changsha.pmtiles",
+      "minzoom": 11,
+      "maxzoom": 16,
       "attribution": "© OpenStreetMap contributors"
     },
     "asia-outline": {
