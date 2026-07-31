@@ -937,6 +937,7 @@
             <button id="mapZoomOut" aria-label="ซูมออก">－</button>
             <button id="mapLocate" aria-label="ไปตำแหน่งปัจจุบันของฉัน">◎</button>
             <button id="mapFullscreen" aria-label="ขยายแผนที่เต็มจอ">⛶</button>
+            <button id="mapTheme" aria-label="เปลี่ยนสีถนนบนแผนที่" title="เปลี่ยนสีถนน">🎨</button>
           </div>
 
           <div class="pin-pop" id="pinPop" role="dialog" aria-label="รายละเอียดสถานที่">
@@ -1761,6 +1762,50 @@
     this.setAttribute("aria-label",on?"ย่อแผนที่กลับ":"ขยายแผนที่เต็มจอ");
     this.textContent=on?"⤢":"⛶";
     setTimeout(function(){gpMap.resize()},260);
+  });
+
+  /* ---- toggle สีถนนบนแผนที่ (feature: ป๋าโจไม่มีไอเดียสีตายตัว ขอเป็นปุ่มลองสลับดูง่ายๆ แทน) ----
+     สลับผ่าน setPaintProperty ไม่ต้องโหลด style ใหม่ทั้งชุด จำค่าที่เลือกไว้ใน localStorage */
+  var ROAD_THEME_KEY="gopanda_road_theme_v1";
+  var roadThemes=[
+    {name:"ฟ้าเทา (เดิม)",
+      casing:["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#3d5c8c",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#2e4568","#243450"],
+      line:["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#a9c4ee",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#7896c2","#4a6285"]},
+    {name:"ทอง",
+      casing:["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#6b4a1a",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#55401f","#3d2f1a"],
+      line:["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#f5c869",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#d9a94f","#a8823f"]},
+    {name:"ขาว/เทาสว่าง",
+      casing:["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#2c2c30",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#252528","#1c1c1e"],
+      line:["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#f1f5f9",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#cbd5e1","#94a3b8"]}
+  ];
+  function applyRoadTheme(i){
+    var t=roadThemes[i];
+    gpMap.setPaintProperty("roads-casing","line-color",t.casing);
+    gpMap.setPaintProperty("roads-line","line-color",t.line);
+    localStorage.setItem(ROAD_THEME_KEY,i);
+  }
+  $("#mapTheme").addEventListener("click",function(){
+    var cur=+(localStorage.getItem(ROAD_THEME_KEY)||0);
+    var next=(cur+1)%roadThemes.length;
+    applyRoadTheme(next);
+    var toast=$("#planToast");
+    if(toast){toast.textContent="🎨 สีถนน: "+roadThemes[next].name;toast.hidden=false;setTimeout(function(){toast.hidden=true},2000)}
+  });
+  gpMap.on("load",function(){
+    var saved=+(localStorage.getItem(ROAD_THEME_KEY)||0);
+    if(saved)applyRoadTheme(saved);
   });
 
   /* ---- ชิปเมือง (feature: กรองเมืองตามทริปที่เปิดอยู่ ไม่ปนข้ามทริป) ----

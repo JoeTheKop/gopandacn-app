@@ -2,13 +2,14 @@
    Shell: precache + cache-first — เปิดออฟไลน์ได้ทั้งแอป (ไฟล์ HTML เดียว + asset)
    ตามแนวเดียวกับ poc/app/sw.js — same-origin cache-first, ไม่แตะไฟล์ข้าม origin (เช่น SheetJS CDN)
 */
-const SHELL_CACHE = "gopandacn-shell-v34";
+const SHELL_CACHE = "gopandacn-shell-v36";
 const SHELL = [
   "./", "./index.html",
   "./manifest.webmanifest",
   "./assets/mascot-64.png", "./assets/mascot-lingling.png",
   "./icons/icon-192.png", "./icons/icon-512.png",
   "./map-style.json",
+  "./map-data/asia-outline.geojson", "./map-data/china-provinces.geojson",
   "./vendor/maplibre/maplibre-gl.js", "./vendor/maplibre/maplibre-gl.css",
   "./vendor/pmtiles/pmtiles.js",
   "./tiles/changsha.pmtiles",

@@ -7,10 +7,42 @@
       "type": "vector",
       "url": "pmtiles://tiles/changsha.pmtiles",
       "attribution": "© OpenStreetMap contributors"
+    },
+    "asia-outline": {
+      "type": "geojson",
+      "data": "map-data/asia-outline.geojson",
+      "attribution": "© Natural Earth"
+    },
+    "china-provinces": {
+      "type": "geojson",
+      "data": "map-data/china-provinces.geojson",
+      "attribution": "© Natural Earth"
     }
   },
   "layers": [
     { "id": "bg", "type": "background", "paint": { "background-color": "#0a1324" } },
+    {
+      "id": "country-fill",
+      "type": "fill",
+      "source": "asia-outline",
+      "maxzoom": 11,
+      "paint": { "fill-color": "#101d33" }
+    },
+    {
+      "id": "province-line",
+      "type": "line",
+      "source": "china-provinces",
+      "minzoom": 3,
+      "maxzoom": 9,
+      "paint": { "line-color": "#20304d", "line-width": 0.6, "line-dasharray": [2, 2] }
+    },
+    {
+      "id": "country-line",
+      "type": "line",
+      "source": "asia-outline",
+      "maxzoom": 11,
+      "paint": { "line-color": "#2c3f5c", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.5, 8, 1.4] }
+    },
     {
       "id": "water",
       "type": "fill",
