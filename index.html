@@ -147,6 +147,7 @@
     background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   }
   .topbar h2{margin:0;font-size:1.02rem;font-weight:600}
+  .brand-mini{width:22px;height:22px;border-radius:6px;object-fit:cover;vertical-align:-5px;margin-right:6px}
   .topbar .sub{font-size:.75rem;color:var(--muted)}
   .icon-btn{
     width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
@@ -154,7 +155,7 @@
     transition:border-color .2s,background .2s;
   }
   .icon-btn:hover{border-color:var(--gold);background:var(--gold-soft)}
-  .hamburger{display:none}
+  .home-open{display:none}
   .status-chip{
     margin-left:auto;display:flex;align-items:center;gap:8px;
     font-size:.74rem;color:#a7f3d0;border:1px solid rgba(16,185,129,.3);
@@ -181,6 +182,12 @@
   .city-chip.active,.cat-chip.active{
     color:#062c22;background:linear-gradient(135deg,var(--emerald),var(--cyan));
     border-color:transparent;font-weight:700;box-shadow:0 4px 14px rgba(34,211,238,.3);
+  }
+  .city-chips{display:flex;gap:10px;flex-wrap:wrap}
+  .trip-select{
+    padding:8px 14px;border-radius:999px;border:1px solid var(--border);
+    background:rgba(30,41,59,.45);color:var(--text);font-size:.82rem;font-weight:600;
+    max-width:220px;
   }
   .map-search{
     margin-left:auto;display:flex;align-items:center;gap:8px;
@@ -334,6 +341,20 @@
   .dock-head h3{margin:0;font-size:.9rem;font-weight:600;white-space:nowrap}
   .dock-collapse{margin-left:auto}
   .dock-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .dock-tabs{display:flex;gap:6px;padding:12px 16px 0;flex:none}
+  .dock-tab-btn{
+    flex:1;padding:8px 6px;border-radius:10px;border:1px solid var(--border);
+    background:rgba(30,41,59,.45);color:var(--muted);font-size:.76rem;font-weight:600;
+    transition:all .2s;white-space:nowrap;
+  }
+  .dock-tab-btn:hover{color:var(--text);border-color:var(--faint)}
+  .dock-tab-btn.active{
+    color:#062c22;background:linear-gradient(135deg,var(--emerald),var(--cyan));
+    border-color:transparent;
+  }
+  .dock-pane{display:none;flex:1;min-height:0;flex-direction:column;overflow-y:auto}
+  .dock-pane.active{display:flex}
+  .dock-pane[data-pane="money"] .fx{flex:none}
   .dock-rail{display:none;flex-direction:column;align-items:center;gap:14px;padding:14px 0}
   @media (min-width:1024px){
     .app.dock-collapsed .dock-body,.app.dock-collapsed .dock-head h3{display:none}
@@ -770,8 +791,8 @@
   .imp-table tr:last-child td{border-bottom:none}
   @media (max-width:640px){.mode-pill{display:none}}
 
-  /* ===== FAB & overlay (mobile) ===== */
-  .fab{display:none}
+  /* ===== overlay (mobile) ===== */
+  .tools-open{display:none}
   .overlay{
     position:fixed;inset:0;background:rgba(2,6,23,.65);backdrop-filter:blur(3px);
     opacity:0;pointer-events:none;transition:opacity .3s;z-index:40;
@@ -785,28 +806,22 @@
   @media (max-width:1023px){
     .app,.app.dock-collapsed{display:block;height:100dvh}
     .sidebar{
-      position:fixed;z-index:50;top:0;left:0;bottom:0;width:min(84vw,320px);
+      position:fixed;z-index:50;top:0;left:0;bottom:0;width:100vw;
       transform:translateX(-105%);transition:transform .35s cubic-bezier(.4,0,.2,1);
-      box-shadow:24px 0 60px rgba(0,0,0,.5);
     }
     .sidebar.open{transform:none}
     .center{height:100dvh}
-    .hamburger{display:grid}
+    .home-open{display:grid}
+    .tools-open{display:grid}
     .status-chip .long{display:none}
     .dock{
-      position:fixed;z-index:50;top:0;right:0;bottom:0;width:min(88vw,360px);
+      position:fixed;z-index:50;top:0;right:0;bottom:0;width:100vw;
       transform:translateX(105%);transition:transform .35s cubic-bezier(.4,0,.2,1);
-      box-shadow:-24px 0 60px rgba(0,0,0,.5);border-left:1px solid var(--border);
+      border-left:1px solid var(--border);
     }
     .dock.open{transform:none}
     .dock-collapse,.dock-rail{display:none!important}
     .dock-close-m{display:grid!important}
-    .fab{
-      display:grid;place-items:center;position:fixed;z-index:45;right:18px;bottom:20px;
-      width:56px;height:56px;border-radius:18px;font-size:1.35rem;
-      background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#1c1400;
-      box-shadow:0 10px 28px rgba(245,158,11,.45);
-    }
     .sum-grid{grid-template-columns:1fr 1fr}
     .sum-grid .sum-card:last-child{grid-column:1/-1}
   }
@@ -887,16 +902,17 @@
   <!-- ===================== CENTER WORKSPACE ===================== -->
   <main class="center">
     <header class="topbar">
-      <button class="icon-btn hamburger" id="openSidebar" aria-label="เปิดเมนูหลัก">☰</button>
+      <button class="icon-btn home-open" id="openSidebar" aria-label="กลับหน้าแรก">🏠</button>
       <div>
-        <h2 id="viewTitle">แผนที่ท่องเที่ยว</h2>
-        <div class="sub" id="viewSub">หูหนาน · โหมดออฟไลน์ · อัปเดตแผนที่ 18 ก.ค.</div>
+        <h2 id="viewTitle"><img src="assets/mascot-64.png" alt="" class="brand-mini">GoPandaCN</h2>
+        <div class="sub" id="viewSub">10 วัน 9 คืน</div>
       </div>
       <div class="mode-pill" role="group" aria-label="โหมดการใช้งาน">
         <button id="modePlan">🖥️ วางแผน</button>
         <button id="modeTrip" class="active">🎒 เดินทาง</button>
       </div>
       <span class="status-chip" id="statusChip"><span class="offline-dot"></span><span class="long">ออฟไลน์พร้อมใช้&nbsp;·&nbsp;</span>กำลังหา GPS…</span>
+      <button class="icon-btn tools-open" id="openDock" aria-label="เปิดกล่องเครื่องมือ">🧰</button>
     </header>
 
     <div class="views">
@@ -904,13 +920,8 @@
       <!-- ---------- MAP ---------- -->
       <section class="view view-map active" id="view-map" aria-label="แผนที่ท่องเที่ยว">
         <div class="map-toolbar">
-          <button class="city-chip active">ฉางซา</button>
-          <button class="city-chip">จางเจียเจี้ย</button>
-          <button class="city-chip">เฟิ่งหวง</button>
-          <button class="city-chip">ฝูหรง</button>
-          <button class="city-chip">ฉงลี่</button>
-          <button class="city-chip">ปักกิ่ง</button>
-          <button class="city-chip">เทียนจิน</button>
+          <select class="trip-select" id="mapTripSelect" aria-label="เลือกทริป"></select>
+          <div class="city-chips" id="cityChips" role="group" aria-label="เลือกเมืองในทริปนี้"></div>
           <button class="drv-chip" id="openDriver">🚕 โชว์คนขับ</button>
           <button class="drv-chip" id="goHome">📍 พากลับที่พัก</button>
           <button class="cat-chip" id="ecoToggle">🔋 ประหยัดแบต</button>
@@ -924,9 +935,9 @@
           <div class="map-badge"><span class="offline-dot"></span>MapLibre · เวกเตอร์ไทล์แคชไว้แล้ว 21.7 MB</div>
           <div class="zoom-ctl"><button id="mapZoomIn" aria-label="ซูมเข้า">＋</button><button id="mapZoomOut" aria-label="ซูมออก">－</button></div>
 
-          <div class="pin-pop show" id="pinPop" role="dialog" aria-label="รายละเอียดสถานที่">
-            <h4 id="popTitle"><span>📍</span>IFS ฉางซา (国金中心)</h4>
-            <p id="popDesc">แลนด์มาร์กใจกลางเมือง จุดถ่ายรูปหมี KAWS ชั้น 7 · ห่างจากที่พัก 850 ม. เดิน 11 นาที · เปิด 10:00–22:00</p>
+          <div class="pin-pop" id="pinPop" role="dialog" aria-label="รายละเอียดสถานที่">
+            <h4 id="popTitle"><span>🐼</span>ยินดีต้อนรับสู่ประเทศจีน</h4>
+            <p id="popDesc">แตะหมุดสีทองบนแผนที่เพื่อดูรายละเอียดสถานที่</p>
             <div class="row">
               <button class="btn-gold">🧭 นำทางออฟไลน์</button>
               <button class="btn-ghost">＋ ใส่แผนวัน 2</button>
@@ -1174,86 +1185,97 @@
     </div>
 
     <div class="dock-body">
-      <!-- AI chat -->
-      <div class="chat">
-        <div class="chat-title">
-          <span class="ava"><img src="assets/mascot-64.png" alt="หลิงหลิง"></span>
-          <div><b>น้องหลิงหลิง — AI พาทัวร์</b><br><span>● ทำงานออฟไลน์บนเครื่อง</span></div>
-        </div>
-        <div class="chat-msgs" id="chatMsgs">
-          <div class="msg ai">หนีห่าวค่ะป๋า 🐼 วันนี้อยู่โซน IFS ฉางซา อยากให้หลิงหลิงช่วยอะไรดีคะ ถามได้เลยไม่ต้องใช้เน็ต~</div>
-          <div class="msg me">ร้านเช้าใกล้ที่พัก เดินไม่เกิน 10 นาที</div>
-          <div class="msg ai">แนะนำ 2 ร้านค่ะ ① เมี่ยนฝู่หูหนาน (เส้นหมี่น้ำ ¥12) เดิน 6 นาที ② ร้านเปาจื่อเจ้าเก่า เปิดตี 5 เดิน 8 นาที — กดหมุดบนแผนที่ให้แล้วนะคะ 📍</div>
-        </div>
-        <div class="chips">
-          <button data-q="วลีสั่งอาหารแบบไม่เผ็ด">🌶️ ขอไม่เผ็ด พูดยังไง</button>
-          <button data-q="รถไฟฟ้าไปสถานีรถไฟฉางซาใต้">🚄 ไปสถานีรถไฟใต้</button>
-          <button data-q="ของฝากจากฉางซา">🎁 ของฝากเด็ด</button>
-        </div>
-        <div class="chat-input">
-          <input id="chatBox" type="text" placeholder="พิมพ์ถามหลิงหลิง…" aria-label="พิมพ์ข้อความถึงผู้ช่วย AI">
-          <button class="send-btn" id="chatSend" aria-label="ส่งข้อความ">➤</button>
+      <div class="dock-tabs" id="dockTabs" role="tablist" aria-label="แท็บกล่องเครื่องมือ">
+        <button class="dock-tab-btn active" data-pane="chat">💬 แชท</button>
+        <button class="dock-tab-btn" data-pane="money">💱 เงิน</button>
+        <button class="dock-tab-btn" data-pane="fare">🛡️ Fare Guard</button>
+      </div>
+
+      <div class="dock-pane active" data-pane="chat">
+        <!-- AI chat -->
+        <div class="chat">
+          <div class="chat-title">
+            <span class="ava"><img src="assets/mascot-64.png" alt="หลิงหลิง"></span>
+            <div><b>น้องหลิงหลิง — AI พาทัวร์</b><br><span>● ทำงานออฟไลน์บนเครื่อง</span></div>
+          </div>
+          <div class="chat-msgs" id="chatMsgs">
+            <div class="msg ai">หนีห่าวค่ะป๋า 🐼 วันนี้อยู่โซน IFS ฉางซา อยากให้หลิงหลิงช่วยอะไรดีคะ ถามได้เลยไม่ต้องใช้เน็ต~</div>
+            <div class="msg me">ร้านเช้าใกล้ที่พัก เดินไม่เกิน 10 นาที</div>
+            <div class="msg ai">แนะนำ 2 ร้านค่ะ ① เมี่ยนฝู่หูหนาน (เส้นหมี่น้ำ ¥12) เดิน 6 นาที ② ร้านเปาจื่อเจ้าเก่า เปิดตี 5 เดิน 8 นาที — กดหมุดบนแผนที่ให้แล้วนะคะ 📍</div>
+          </div>
+          <div class="chips">
+            <button data-q="วลีสั่งอาหารแบบไม่เผ็ด">🌶️ ขอไม่เผ็ด พูดยังไง</button>
+            <button data-q="รถไฟฟ้าไปสถานีรถไฟฉางซาใต้">🚄 ไปสถานีรถไฟใต้</button>
+            <button data-q="ของฝากจากฉางซา">🎁 ของฝากเด็ด</button>
+          </div>
+          <div class="chat-input">
+            <input id="chatBox" type="text" placeholder="พิมพ์ถามหลิงหลิง…" aria-label="พิมพ์ข้อความถึงผู้ช่วย AI">
+            <button class="send-btn" id="chatSend" aria-label="ส่งข้อความ">➤</button>
+          </div>
         </div>
       </div>
 
-      <!-- FX converter -->
-      <div class="fx">
-        <div class="fx-head"><b>💱 แลกเงินด่วน THB ↔ CNY</b><span style="display:flex;align-items:center;gap:6px"><span id="fxNote">เรทออฟไลน์ 17 ก.ค.</span><button id="fxSync" aria-label="ซิงก์เรทล่าสุด" title="ซิงก์เรทเมื่อมีเน็ต" style="font-size:.8rem">🔄</button></span></div>
-        <div class="fx-row">
-          <div class="fx-field"><label>CNY ¥</label><input id="fxCny" class="num" type="number" inputmode="decimal" value="100" aria-label="จำนวนเงินหยวน"></div>
-          <button class="fx-swap" id="fxSwap" aria-label="สลับสกุลเงิน">⇄</button>
-          <div class="fx-field"><label>THB ฿</label><input id="fxThb" class="num" type="number" inputmode="decimal" value="486" aria-label="จำนวนเงินบาท"></div>
+      <div class="dock-pane" data-pane="money">
+        <!-- FX converter -->
+        <div class="fx">
+          <div class="fx-head"><b>💱 แลกเงินด่วน THB ↔ CNY</b><span style="display:flex;align-items:center;gap:6px"><span id="fxNote">เรทออฟไลน์ 17 ก.ค.</span><button id="fxSync" aria-label="ซิงก์เรทล่าสุด" title="ซิงก์เรทเมื่อมีเน็ต" style="font-size:.8rem">🔄</button></span></div>
+          <div class="fx-row">
+            <div class="fx-field"><label>CNY ¥</label><input id="fxCny" class="num" type="number" inputmode="decimal" value="100" aria-label="จำนวนเงินหยวน"></div>
+            <button class="fx-swap" id="fxSwap" aria-label="สลับสกุลเงิน">⇄</button>
+            <div class="fx-field"><label>THB ฿</label><input id="fxThb" class="num" type="number" inputmode="decimal" value="486" aria-label="จำนวนเงินบาท"></div>
+          </div>
+          <div class="fx-rate num" id="fxRate">อัตรา <b>¥1 = ฿4.86</b> · อิงเรทซุปเปอร์ริช สาขาสีลม</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <button class="btn-ghost" id="fxSaveExpense" style="flex:none">＋ บันทึกเป็นรายจ่าย</button>
+            <span id="fxSaveMsg" style="font-size:.72rem;color:#6ee7b7" hidden></span>
+          </div>
+          <span class="label" style="display:block;margin-bottom:8px">ป้ายราคาที่เจอบ่อย</span>
+          <div class="preset-grid" id="presets">
+            <button class="preset num" data-cny="10"><b>¥10</b><span>฿48.6</span></button>
+            <button class="preset num" data-cny="25"><b>¥25</b><span>฿121.5</span></button>
+            <button class="preset num" data-cny="50"><b>¥50</b><span>฿243</span></button>
+            <button class="preset num" data-cny="100"><b>¥100</b><span>฿486</span></button>
+            <button class="preset num" data-cny="200"><b>¥200</b><span>฿972</span></button>
+            <button class="preset num" data-cny="500"><b>¥500</b><span>฿2,430</span></button>
+          </div>
         </div>
-        <div class="fx-rate num" id="fxRate">อัตรา <b>¥1 = ฿4.86</b> · อิงเรทซุปเปอร์ริช สาขาสีลม</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <button class="btn-ghost" id="fxSaveExpense" style="flex:none">＋ บันทึกเป็นรายจ่าย</button>
-          <span id="fxSaveMsg" style="font-size:.72rem;color:#6ee7b7" hidden></span>
-        </div>
-        <span class="label" style="display:block;margin-bottom:8px">ป้ายราคาที่เจอบ่อย</span>
-        <div class="preset-grid" id="presets">
-          <button class="preset num" data-cny="10"><b>¥10</b><span>฿48.6</span></button>
-          <button class="preset num" data-cny="25"><b>¥25</b><span>฿121.5</span></button>
-          <button class="preset num" data-cny="50"><b>¥50</b><span>฿243</span></button>
-          <button class="preset num" data-cny="100"><b>¥100</b><span>฿486</span></button>
-          <button class="preset num" data-cny="200"><b>¥200</b><span>฿972</span></button>
-          <button class="preset num" data-cny="500"><b>¥500</b><span>฿2,430</span></button>
+
+        <!-- Price Listener (feature 2.1) -->
+        <div class="fx" id="plBox">
+          <div class="fx-head"><b>🎧 หูฟังราคา</b><span id="plModelStatus" style="font-size:.7rem;color:var(--muted)">ยังไม่ได้โหลดโมเดล</span></div>
+          <div class="sub2" style="margin-bottom:8px">ฟังแม่ค้าพูดราคาจีน → กรอกลงช่อง CNY ด้านบนอัตโนมัติ · ทำงานออฟไลน์ 100% หลังโหลดโมเดลครั้งแรก</div>
+          <button class="btn-gold" id="plDownloadBtn" style="width:100%;justify-content:center">⬇ โหลดโมเดลฟังเสียง (44 MB, ครั้งเดียว)</button>
+          <div class="pack-bar" id="plDlBar" style="display:none;margin-top:8px"><i style="width:0%"></i></div>
+          <button class="btn-gold" id="plListenBtn" style="width:100%;justify-content:center;display:none">🎙️ เริ่มฟัง</button>
+          <div id="plLive" style="margin-top:8px;font-size:.78rem;color:var(--muted);min-height:1.2em"></div>
+          <div id="plResult" style="margin-top:6px;font-size:.85rem"></div>
         </div>
       </div>
 
-      <!-- Price Listener (feature 2.1) -->
-      <div class="fx" id="plBox">
-        <div class="fx-head"><b>🎧 หูฟังราคา</b><span id="plModelStatus" style="font-size:.7rem;color:var(--muted)">ยังไม่ได้โหลดโมเดล</span></div>
-        <div class="sub2" style="margin-bottom:8px">ฟังแม่ค้าพูดราคาจีน → กรอกลงช่อง CNY ด้านบนอัตโนมัติ · ทำงานออฟไลน์ 100% หลังโหลดโมเดลครั้งแรก</div>
-        <button class="btn-gold" id="plDownloadBtn" style="width:100%;justify-content:center">⬇ โหลดโมเดลฟังเสียง (44 MB, ครั้งเดียว)</button>
-        <div class="pack-bar" id="plDlBar" style="display:none;margin-top:8px"><i style="width:0%"></i></div>
-        <button class="btn-gold" id="plListenBtn" style="width:100%;justify-content:center;display:none">🎙️ เริ่มฟัง</button>
-        <div id="plLive" style="margin-top:8px;font-size:.78rem;color:var(--muted);min-height:1.2em"></div>
-        <div id="plResult" style="margin-top:6px;font-size:.85rem"></div>
-      </div>
-
-      <!-- Fare Guard (feature 2.4) -->
-      <div class="fx" id="fgBox">
-        <div class="fx-head"><b>🛡️ Fare Guard</b></div>
-        <div class="sub2" style="margin-bottom:8px">ปกติ DiDi โชว์ราคาให้ก่อนกดจองอยู่แล้ว — เครื่องมือนี้มีไว้สำรองสำหรับตอนเรียกแท็กซี่ริมถนน (เช่น หน้าสนามบิน/สถานีรถไฟ) หรือ DiDi ใช้ไม่ได้ตอนนั้น</div>
-        <span class="label" style="display:block;margin-bottom:6px">ราคาจริงจากทริปที่เคยบันทึกไว้</span>
-        <div id="fgRealFares" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>
-        <span class="label" style="display:block;margin-bottom:6px">เช็คราคาก่อนขึ้นรถ</span>
-        <div class="trip-form-row" style="margin-top:0">
-          <label>คนขับเสนอราคา (¥)
-            <input type="number" id="fgQuote" class="tf-text" min="0" step="1">
-          </label>
-          <label>ระยะทางโดยประมาณ (กม.)
-            <input type="number" id="fgDist" class="tf-text" min="0" step="0.5">
-          </label>
+      <div class="dock-pane" data-pane="fare">
+        <!-- Fare Guard (feature 2.4) -->
+        <div class="fx" id="fgBox">
+          <div class="fx-head"><b>🛡️ Fare Guard</b></div>
+          <div class="sub2" style="margin-bottom:8px">ปกติ DiDi โชว์ราคาให้ก่อนกดจองอยู่แล้ว — เครื่องมือนี้มีไว้สำรองสำหรับตอนเรียกแท็กซี่ริมถนน (เช่น หน้าสนามบิน/สถานีรถไฟ) หรือ DiDi ใช้ไม่ได้ตอนนั้น</div>
+          <span class="label" style="display:block;margin-bottom:6px">ราคาจริงจากทริปที่เคยบันทึกไว้</span>
+          <div id="fgRealFares" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px"></div>
+          <span class="label" style="display:block;margin-bottom:6px">เช็คราคาก่อนขึ้นรถ</span>
+          <div class="trip-form-row" style="margin-top:0">
+            <label>คนขับเสนอราคา (¥)
+              <input type="number" id="fgQuote" class="tf-text" min="0" step="1">
+            </label>
+            <label>ระยะทางโดยประมาณ (กม.)
+              <input type="number" id="fgDist" class="tf-text" min="0" step="0.5">
+            </label>
+          </div>
+          <button class="btn-gold" id="fgCheckBtn" style="width:100%;margin-top:8px;justify-content:center">ตรวจสอบราคา</button>
+          <div id="fgResult" style="margin-top:8px;font-size:.85rem"></div>
+          <div class="sub2" style="margin-top:8px;font-size:.66rem">⚠️ เป็นช่วงราคาคร่าวๆ จากโครงสร้างมิเตอร์แท็กซี่จีนทั่วไป (ค่าเริ่มต้น + ต่อกิโล) ไม่ใช่เรทที่ยืนยันแล้วเฉพาะเมืองนี้ — ใช้ประกอบการตัดสินใจ ไม่ใช่ราคาทางการ</div>
         </div>
-        <button class="btn-gold" id="fgCheckBtn" style="width:100%;margin-top:8px;justify-content:center">ตรวจสอบราคา</button>
-        <div id="fgResult" style="margin-top:8px;font-size:.85rem"></div>
-        <div class="sub2" style="margin-top:8px;font-size:.66rem">⚠️ เป็นช่วงราคาคร่าวๆ จากโครงสร้างมิเตอร์แท็กซี่จีนทั่วไป (ค่าเริ่มต้น + ต่อกิโล) ไม่ใช่เรทที่ยืนยันแล้วเฉพาะเมืองนี้ — ใช้ประกอบการตัดสินใจ ไม่ใช่ราคาทางการ</div>
       </div>
     </div>
   </aside>
 
-  <button class="fab" id="openDock" aria-label="เปิดกล่องเครื่องมือ">🧰</button>
   <div class="overlay" id="overlay"></div>
 
   <div class="big-show" id="bigShow" role="dialog" aria-label="โชว์วลีตัวอักษรใหญ่">
@@ -1547,7 +1569,7 @@
 
   /* ---- view switching ---- */
   var titles={
-    map:["แผนที่ท่องเที่ยว","หูหนาน · โหมดออฟไลน์ · อัปเดตแผนที่ 18 ก.ค."],
+    map:["แผนที่ท่องเที่ยว","10 วัน 9 คืน"],
     itin:["แผนเที่ยวรายวัน","ทริปหูหนานครบสูตร · 12–21 ก.ย. · 10 วัน 9 คืน"],
     journal:["สมุดบันทึก & ค่าใช้จ่าย","งบทริป ¥6,000 · ใช้ไป 21%"],
     packs:["แพ็กข้อมูลเมือง","จัดการแผนที่ & ข้อมูลออฟไลน์รายเมือง"],
@@ -1560,7 +1582,8 @@
     $$(".nav-btn").forEach(function(b){b.classList.toggle("active",b.dataset.view===v)});
     $$(".view").forEach(function(s){s.classList.remove("active")});
     $("#view-"+v).classList.add("active");
-    $("#viewTitle").textContent=titles[v][0];
+    if(v==="map")$("#viewTitle").innerHTML='<img src="assets/mascot-64.png" alt="" class="brand-mini">GoPandaCN';
+    else $("#viewTitle").textContent=titles[v][0];
     $("#viewSub").textContent=titles[v][1];
     $("#modePlan").classList.toggle("active",v==="plan");
     $("#modeTrip").classList.toggle("active",v!=="plan");
@@ -1583,6 +1606,14 @@
   $("#railExpand").addEventListener("click",function(){app.classList.remove("dock-collapsed")});
   $$(".dock-rail .rail-btn").forEach(function(b){
     b.addEventListener("click",function(){app.classList.remove("dock-collapsed")});
+  });
+
+  /* ---- แท็บกล่องเครื่องมือ ---- */
+  $("#dockTabs").addEventListener("click",function(e){
+    var b=e.target.closest(".dock-tab-btn");if(!b)return;
+    $$("#dockTabs .dock-tab-btn").forEach(function(x){x.classList.remove("active")});
+    b.classList.add("active");
+    $$(".dock-pane").forEach(function(p){p.classList.toggle("active",p.dataset.pane===b.dataset.pane)});
   });
 
   /* ---- mobile drawers ---- */
@@ -1611,13 +1642,13 @@
      ตอนนี้มีแค่ฉางซาเมืองเดียวที่มี .pmtiles จริง (ดู FEATURE-ROADMAP 1.2) เมืองอื่นในทริปยังไม่มีข้อมูลแผนที่จริง */
   var curPinId="ifs";
   var pinData={
-    ifs:{ic:"📍",title:"IFS ฉางซา (国金中心)",desc:"แลนด์มาร์กใจกลางเมือง จุดถ่ายรูปหมี KAWS ชั้น 7 · ห่างจากที่พัก 850 ม. เดิน 11 นาที · เปิด 10:00–22:00",lng:112.9793,lat:28.1938},
-    orange:{ic:"🍊",title:"เกาะส้ม (橘子洲)",desc:"เกาะกลางแม่น้ำเซียง จุดชมวิวรูปปั้นเหมาเจ๋อตงหนุ่ม · นั่งรถรางรอบเกาะ ¥40 · เหมาะช่วงเย็นถึงค่ำ",lng:112.96,lat:28.1965},
-    pozi:{ic:"🏮",title:"ถนนโบราณโผจื่อเจีย (坡子街)",desc:"ถนนสายของกินอายุ 1,200 ปี · เต้าหู้เหม็นดำเจ้าดัง Huogongdian · คนแน่นช่วง 18:00 เป็นต้นไป",lng:112.9723,lat:28.1927},
-    yuelu:{ic:"⛰️",title:"เขาเยว่ลู่ (岳麓山)",desc:"จุดชมวิวเมืองฉางซา + วิทยาลัยเยว่ลู่พันปี · กระเช้าขึ้น ¥30 · ใช้เวลาครึ่งวัน แนะนำไปเช้า",lng:112.9316,lat:28.1855},
-    wanlong:{ic:"⛷️",title:"หวันหลง สกีรีสอร์ต (万龙滑雪场)",desc:"หนึ่งในสกีรีสอร์ตแรกๆ ของฉงลี่ · พิกัดยืนยันจาก OpenStreetMap",lng:115.3930784,lat:40.9613283},
-    thaiwoo:{ic:"⛷️",title:"ไท่อู่ สกีรีสอร์ต (太舞滑雪场)",desc:"太舞滑雪小镇 (Thaiwoo) · พิกัดยืนยันจาก OpenStreetMap",lng:115.4366885,lat:40.8833809},
-    yunding:{ic:"⛷️",title:"มี่หย่วน หยุนติ่ง (密苑云顶乐园)",desc:"หรือชื่อ Genting Secret Garden / Yunding Ski Park · พิกัดยืนยันจาก OpenStreetMap",lng:115.4185984,lat:40.9483320}
+    ifs:{ic:"📍",title:"IFS ฉางซา (国金中心)",desc:"แลนด์มาร์กใจกลางเมือง จุดถ่ายรูปหมี KAWS ชั้น 7 · ห่างจากที่พัก 850 ม. เดิน 11 นาที · เปิด 10:00–22:00",lng:112.9793,lat:28.1938,city:"ฉางซา"},
+    orange:{ic:"🍊",title:"เกาะส้ม (橘子洲)",desc:"เกาะกลางแม่น้ำเซียง จุดชมวิวรูปปั้นเหมาเจ๋อตงหนุ่ม · นั่งรถรางรอบเกาะ ¥40 · เหมาะช่วงเย็นถึงค่ำ",lng:112.96,lat:28.1965,city:"ฉางซา"},
+    pozi:{ic:"🏮",title:"ถนนโบราณโผจื่อเจีย (坡子街)",desc:"ถนนสายของกินอายุ 1,200 ปี · เต้าหู้เหม็นดำเจ้าดัง Huogongdian · คนแน่นช่วง 18:00 เป็นต้นไป",lng:112.9723,lat:28.1927,city:"ฉางซา"},
+    yuelu:{ic:"⛰️",title:"เขาเยว่ลู่ (岳麓山)",desc:"จุดชมวิวเมืองฉางซา + วิทยาลัยเยว่ลู่พันปี · กระเช้าขึ้น ¥30 · ใช้เวลาครึ่งวัน แนะนำไปเช้า",lng:112.9316,lat:28.1855,city:"ฉางซา"},
+    wanlong:{ic:"⛷️",title:"หวันหลง สกีรีสอร์ต (万龙滑雪场)",desc:"หนึ่งในสกีรีสอร์ตแรกๆ ของฉงลี่ · พิกัดยืนยันจาก OpenStreetMap",lng:115.3930784,lat:40.9613283,city:"ฉงลี่"},
+    thaiwoo:{ic:"⛷️",title:"ไท่อู่ สกีรีสอร์ต (太舞滑雪场)",desc:"太舞滑雪小镇 (Thaiwoo) · พิกัดยืนยันจาก OpenStreetMap",lng:115.4366885,lat:40.8833809,city:"ฉงลี่"},
+    yunding:{ic:"⛷️",title:"มี่หย่วน หยุนติ่ง (密苑云顶乐园)",desc:"หรือชื่อ Genting Secret Garden / Yunding Ski Park · พิกัดยืนยันจาก OpenStreetMap",lng:115.4185984,lat:40.9483320,city:"ฉงลี่"}
   };
   var cityCenters={
     "ฉางซา":{lng:pinData.ifs.lng,lat:pinData.ifs.lat,zoom:13},
@@ -1635,7 +1666,23 @@
     var d=pinData[id];
     $("#popTitle").innerHTML="<span>"+d.ic+"</span>"+d.title;
     $("#popDesc").textContent=d.desc;
+    $("#pinPop .row").style.display="";
     $("#pinPop").classList.add("show");
+  }
+  /* ---- welcome state / fallback ต่อเมือง (feature: ไม่ให้กล่องหมุด default ค้างบังจอ +
+     บอกตรงๆ ถ้าเมืองนั้นยังไม่มีหมุด POI คัดสรร แทนที่จะปล่อยแผนที่ว่างเปล่าดูเหมือนพัง) ---- */
+  function showCityPinState(name){
+    var hasPins=Object.keys(pinData).some(function(id){return pinData[id].city===name});
+    var pop=$("#pinPop");
+    if(hasPins){
+      $("#popTitle").innerHTML="<span>🐼</span>ยินดีต้อนรับสู่ประเทศจีน";
+      $("#popDesc").textContent="แตะหมุดสีทองบนแผนที่เพื่อดูรายละเอียดสถานที่";
+    }else{
+      $("#popTitle").innerHTML="<span>🐼</span>ยังไม่มีจุดแนะนำสำหรับ"+esc(name);
+      $("#popDesc").textContent="ทีมงานยังไม่ได้คัดหมุดสถานที่สำหรับเมืองนี้ — ลองเลื่อนแผนที่สำรวจเองได้เลย หรือถามน้องหลิงหลิงในกล่องเครื่องมือ";
+    }
+    pop.querySelector(".row").style.display="none";
+    pop.classList.add("show");
   }
   var pmProtocol=new pmtiles.Protocol();
   maplibregl.addProtocol("pmtiles",pmProtocol.tile);
@@ -1661,21 +1708,47 @@
   });
   $("#mapZoomIn").addEventListener("click",function(){gpMap.zoomIn()});
   $("#mapZoomOut").addEventListener("click",function(){gpMap.zoomOut()});
-  $$(".city-chip").forEach(function(c){
-    c.addEventListener("click",function(){
-      $$(".city-chip").forEach(function(x){x.classList.remove("active")});
-      c.classList.add("active");
-      var msg=$("#cityMsg");
-      var city=cityCenters[c.textContent.trim()];
-      if(city){
-        msg.hidden=true;
-        gpMap.flyTo({center:[city.lng,city.lat],zoom:city.zoom});
-      }else{
-        msg.hidden=false;
-        msg.textContent="⚠️ แผนที่จริงของ"+c.textContent.trim()+"ยังไม่พร้อม — ตอนนี้มีแค่ฉางซา/ฉงลี่/ปักกิ่ง/เทียนจินที่ใช้แผนที่ออฟไลน์จริงได้";
-      }
-    });
+
+  /* ---- ชิปเมือง + ดรอปดาวน์ทริป (feature: กรองเมืองตามทริปที่เปิดอยู่ ไม่ปนข้ามทริป) ----
+     renderCityChips/renderTripSelect ถูกเรียกจริงจาก renderTripCardMeta() (ทำงานหลัง activeTrip
+     พร้อมค่าเสมอ ไม่ใช่ตรงนี้) เพราะ activeTrip ยังไม่ถูก assign ค่าตอนบรรทัดนี้รันจริง (ประกาศอยู่ถัดไปในไฟล์) */
+  function flyToCity(name){
+    var msg=$("#cityMsg");
+    var city=cityCenters[name];
+    if(city){
+      msg.hidden=true;
+      gpMap.flyTo({center:[city.lng,city.lat],zoom:city.zoom});
+      showCityPinState(name);
+    }else{
+      msg.hidden=false;
+      msg.textContent="⚠️ แผนที่จริงของ"+name+"ยังไม่พร้อม — ตอนนี้มีแค่ฉางซา/ฉงลี่/ปักกิ่ง/เทียนจินที่ใช้แผนที่ออฟไลน์จริงได้";
+      $("#pinPop").classList.remove("show");
+    }
+  }
+  function renderCityChips(){
+    var wrap=$("#cityChips");
+    var cities=(activeTrip.cities&&activeTrip.cities.length)?activeTrip.cities:Object.keys(cityCenters);
+    wrap.innerHTML=cities.map(function(name,i){
+      return '<button class="city-chip'+(i===0?" active":"")+'" data-city="'+esc(name)+'">'+esc(name)+"</button>";
+    }).join("");
+    if(cities.length)flyToCity(cities[0]);
+  }
+  $("#cityChips").addEventListener("click",function(e){
+    var c=e.target.closest(".city-chip");if(!c)return;
+    $$("#cityChips .city-chip").forEach(function(x){x.classList.remove("active")});
+    c.classList.add("active");
+    flyToCity(c.dataset.city);
   });
+  function renderTripSelect(){
+    var sel=$("#mapTripSelect");
+    var list=loadTripsList();
+    if(!list.some(function(t){return t.id===activeTrip.id}))
+      list=list.concat([{id:activeTrip.id,name:activeTrip.name}]);
+    sel.innerHTML=list.map(function(t){
+      return '<option value="'+esc(t.id)+'"'+(t.id===activeTrip.id?" selected":"")+'>'+esc(t.name)+"</option>";
+    }).join("");
+  }
+  $("#mapTripSelect").addEventListener("change",function(){switchTrip(this.value)});
 
   /* ---- GPS จริง (feature 1.3): ปักหมุด "ฉันอยู่ตรงนี้" บนแผนที่จริงถ้าขอสิทธิ์สำเร็จ
      geoState/renderStatusChip ประกาศอยู่ถัดไปในไฟล์ (โหมดประหยัดแบต) — อ่านได้ปลอดภัยเพราะ
@@ -2662,7 +2735,7 @@
   }
   /* activeTrip ต้องมีค่าก่อน renderBoard()/runDoctor() ตัวแรกที่รันตอนโหลดสคริปต์ (ด้านล่าง) —
      ค่าเริ่มต้นนี้คือดีโมหูหนาน ระบบหลายทริปท้ายไฟล์จะ override ให้ตรงกับทริปที่บันทึกไว้ล่าสุดอีกที */
-  var activeTrip={id:"default",name:"หูหนานครบสูตร",sub:"จางเจียเจี้ย · เฟิ่งหวง · ฝูหรง · เทียนเหมินซาน · ฉางซา",startDate:"2026-09-12",dayCount:10,budget:6000};
+  var activeTrip={id:"default",name:"หูหนานครบสูตร",sub:"จางเจียเจี้ย · เฟิ่งหวง · ฝูหรง · เทียนเหมินซาน · ฉางซา",startDate:"2026-09-12",dayCount:10,budget:6000,cities:["ฉางซา","จางเจียเจี้ย","เฟิ่งหวง","ฝูหรง"]};
   applyCalendar(activeTrip);
   renderDayStrip();
   var backlog=[
@@ -3070,7 +3143,7 @@
   });
   $("#qrModal").addEventListener("click",function(e){
     if(e.target.closest("#dlTrip")){
-      var data={app:"GoPandaCN",version:1,trip:{name:activeTrip.name,startDate:activeTrip.startDate,dayCount:activeTrip.dayCount,budget:activeTrip.budget},days:days,backlog:backlog,journal:journalState,checklist:checklist};
+      var data={app:"GoPandaCN",version:1,trip:{name:activeTrip.name,startDate:activeTrip.startDate,dayCount:activeTrip.dayCount,budget:activeTrip.budget,cities:activeTrip.cities||[]},days:days,backlog:backlog,journal:journalState,checklist:checklist};
       var a=document.createElement("a");
       a.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(data));
       a.download=activeTrip.id+".gopanda";
@@ -3132,7 +3205,7 @@
     }
     activeTrip={id:activeTrip.id,name:tripName,sub:activeTrip.sub,
       startDate:startDate||"2026-09-12",dayCount:dayCount||Object.keys(gopandaImportData.days||{}).length||10,
-      budget:tm.budget||6000};
+      budget:tm.budget||6000,cities:tm.cities||[]};
     switchToLiveData(gopandaImportData.days,gopandaImportData.backlog||[],gopandaImportData.journal||{spent:0,entries:[]},gopandaImportData.checklist||defaultChecklist());
     persistCurrentTrip();
     $("#qrModal").classList.remove("show");
@@ -3378,6 +3451,7 @@
       startDate:t.startDate||"2026-09-12",
       dayCount:t.dayCount||Object.keys(t.days||{}).length||10,
       budget:t.budget||6000,
+      cities:t.cities||[],
       days:t.days,backlog:t.backlog||[],
       journal:t.journal||{spent:0,entries:[]},
       checklist:t.checklist||defaultChecklist(),
@@ -3389,6 +3463,7 @@
     var idx=list.findIndex(function(t){return t.id===activeTrip.id});
     var snap={id:activeTrip.id,name:activeTrip.name,sub:activeTrip.sub||"",
       startDate:activeTrip.startDate,dayCount:activeTrip.dayCount,budget:activeTrip.budget,
+      cities:activeTrip.cities||[],
       days:days,backlog:backlog,journal:journalState,checklist:checklist,updatedAt:Date.now()};
     if(idx>-1)list[idx]=snap;else list.push(snap);
     saveTripsList(list);
@@ -3412,9 +3487,12 @@
     $("#tripDateRange").textContent=dateRange;
     $("#tripDuration").textContent=duration;
     $("#tripCountdown").textContent=computeCountdown(activeTrip);
+    renderCityChips();renderTripSelect();
     renderDayStrip();
     titles.itin[1]="ทริป"+activeTrip.name+" · "+dateRange+" · "+duration;
     if($("#view-itin").classList.contains("active"))$("#viewSub").textContent=titles.itin[1];
+    titles.map[1]=dateRange+" · "+duration;
+    if($("#view-map").classList.contains("active"))$("#viewSub").textContent=titles.map[1];
   }
   function switchToLiveData(days2,backlog2,journal2,checklist2){
     days=days2;backlog=backlog2;curDay=1;
@@ -3430,7 +3508,7 @@
     var raw=loadTripsList().find(function(x){return x.id===id});
     if(!raw)return;
     var t=normalizeTrip(raw);
-    activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget};
+    activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget,cities:t.cities||[]};
     switchToLiveData(t.days,t.backlog,t.journal,t.checklist);
     $("#tripsModal").classList.remove("show");
     var toast=$("#planToast");
@@ -3447,7 +3525,7 @@
     var id="trip-"+Date.now();
     var blankDays={};
     for(var n=1;n<=dayCount;n++)blankDays[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};
-    activeTrip={id:id,name:name,sub:"ทริปใหม่ — ยังไม่มีแผน",startDate:startDate,dayCount:dayCount,budget:budget};
+    activeTrip={id:id,name:name,sub:"ทริปใหม่ — ยังไม่มีแผน",startDate:startDate,dayCount:dayCount,budget:budget,cities:[]};
     switchToLiveData(blankDays,[],{spent:0,entries:[]},defaultChecklist());
     persistCurrentTrip();
     $("#newTripName").value="";
@@ -3462,7 +3540,7 @@
     if(activeTrip.id===id){
       if(list.length){
         var t=normalizeTrip(list[0]);
-        activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget};
+        activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget,cities:t.cities||[]};
         switchToLiveData(t.days,t.backlog,t.journal,t.checklist);persistCurrentTrip();
       }
       else location.reload(); // ลบทริปสุดท้ายทิ้ง — โหลดดีโมเริ่มต้นใหม่สะอาด ๆ
@@ -3516,8 +3594,19 @@
     var lastActiveId=localStorage.getItem(ACTIVE_KEY);
     var raw=list.find(function(x){return x.id===lastActiveId})||list[0];
     var t=normalizeTrip(raw);
-    activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget};
+    activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget,cities:t.cities||[]};
     switchToLiveData(t.days,t.backlog,t.journal,t.checklist);
+  })();
+
+  /* ---- auto-switch หน้า landing ตามวันทริปจริง (มือถือเท่านั้น — desktop เห็น Dashboard คู่กับแผนที่อยู่แล้วตลอดเวลา)
+     ยังไม่ถึงวันเดินทาง → เปิดมาเจอ Dashboard ก่อน · ถึงวันเดินทางแล้ว → เปิดมาเจอแผนที่ (ค่าเริ่มต้นเดิม) ---- */
+  (function applyAutoLanding(){
+    var start=new Date(activeTrip.startDate+"T00:00:00");
+    var today=new Date();today.setHours(0,0,0,0);
+    var diffDays=Math.round((start-today)/86400000);
+    if(diffDays>0 && window.matchMedia("(max-width:1023px)").matches){
+      sidebar.classList.add("open");overlay.classList.add("show");
+    }
   })();
   window.addEventListener("beforeunload",persistCurrentTrip); // กันลืมบันทึกก่อนปิด/รีเฟรชแท็บ
 })();
