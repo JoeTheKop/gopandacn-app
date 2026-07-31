@@ -1755,6 +1755,14 @@
       pinMarkers[id]=new maplibregl.Marker({element:el}).setLngLat([d.lng,d.lat]).addTo(gpMap);
     });
   });
+  /* ---- คลิกแล้วบินซูมเข้าแบบ Google Earth (feature: ตอนซูมออกกว้างเห็นแค่เงาประเทศ
+     คลิกจุดไหนก็บินเข้าไปที่จุดนั้นให้เห็นระดับถนน) — ทำงานเฉพาะตอนซูมออกกว้างพอ (ยังไม่ถึงระดับเห็นถนนจริง)
+     เพื่อไม่ให้ไปรบกวนการดูแผนที่ปกติตอนซูมเข้าเมืองแล้ว (คลิกหมุดเองมี marker DOM ของตัวเองแยกอยู่แล้ว ไม่ชนกัน) */
+  gpMap.on("click",function(e){
+    var z=gpMap.getZoom();
+    if(z>=12)return;
+    gpMap.flyTo({center:e.lngLat,zoom:Math.min(14,z+4),speed:1.2,curve:1.4});
+  });
   $("#mapZoomIn").addEventListener("click",function(){gpMap.zoomIn()});
   $("#mapZoomOut").addEventListener("click",function(){gpMap.zoomOut()});
   $("#mapFullscreen").addEventListener("click",function(){
