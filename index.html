@@ -106,7 +106,7 @@
   .ready:hover{background:rgba(245,158,11,.07)}
   .ready-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
   .ready-row strong{color:var(--gold-2);font-size:1rem}
-  .ready-bar{height:8px;border-radius:99px;background:#3f0d14;border:1px solid var(--border-soft);overflow:hidden}
+  .ready-bar{height:8px;border-radius:99px;background:#8a1620;border:1px solid var(--border-soft);overflow:hidden}
   .ready-fill{
     height:100%;width:78%;border-radius:99px;
     background:linear-gradient(90deg,var(--emerald) 0%,#34d399 60%,#6ee7b7 100%);
@@ -214,20 +214,16 @@
   .map-pin{cursor:pointer}
   .map-pin circle.halo{opacity:0;transition:opacity .2s}
   .map-pin:hover circle.halo,.map-pin.selected circle.halo{opacity:1}
-  .map-badge{
-    position:absolute;left:14px;top:14px;display:flex;align-items:center;gap:8px;
-    background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    border:1px solid rgba(16,185,129,.35);border-radius:999px;
-    padding:7px 14px;font-size:.74rem;color:#a7f3d0;
-  }
   .zoom-ctl{
     position:absolute;right:14px;top:14px;display:flex;flex-direction:column;
     border:1px solid var(--border);border-radius:12px;overflow:hidden;
     background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    box-shadow:0 4px 16px rgba(0,0,0,.35);
   }
-  .zoom-ctl button{width:38px;height:38px;font-size:1.1rem;color:var(--muted)}
+  .zoom-ctl button{width:38px;height:38px;font-size:1.15rem;color:var(--gold-2);font-weight:700}
   .zoom-ctl button:not(:last-child){border-bottom:1px solid var(--border)}
-  .zoom-ctl button:hover{color:var(--gold-2);background:var(--gold-soft)}
+  .zoom-ctl button:hover{color:#062c22;background:linear-gradient(135deg,var(--emerald),var(--cyan))}
+  .zoom-ctl button:active{color:#062c22;background:linear-gradient(135deg,var(--gold),var(--gold-2))}
   .pin-pop{
     position:absolute;left:14px;bottom:14px;right:14px;max-width:360px;
     background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
@@ -754,7 +750,7 @@
   /* การ์ดเต็มความกว้างสำหรับลิสต์/ฟอร์มในโมดัล — หน้าตาเดียวกับ .wp-card แต่ไม่ล็อก 252px
      (.wp-card เดิมสงวนไว้ให้พรีวิววิดเจ็ตล็อกสกรีนที่ต้องเป็นขนาดจอมือถือจำลอง) */
   .modal-card{
-    width:100%;border:1px solid var(--border);border-radius:16px;
+    position:relative;width:100%;border:1px solid var(--border);border-radius:16px;
     background:linear-gradient(160deg,#131f38,#0d1730);padding:12px 14px;text-align:left;
   }
   .trip-form-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
@@ -936,10 +932,10 @@
         <div class="map-frame" id="mapFrame">
           <div id="mapCanvas" role="img" aria-label="แผนที่จริงเมืองฉางซา (MapLibre + PMTiles ออฟไลน์)"></div>
 
-          <div class="map-badge"><span class="offline-dot"></span>MapLibre · เวกเตอร์ไทล์แคชไว้แล้ว 21.7 MB</div>
           <div class="zoom-ctl">
             <button id="mapZoomIn" aria-label="ซูมเข้า">＋</button>
             <button id="mapZoomOut" aria-label="ซูมออก">－</button>
+            <button id="mapLocate" aria-label="ไปตำแหน่งปัจจุบันของฉัน">◎</button>
             <button id="mapFullscreen" aria-label="ขยายแผนที่เต็มจอ">⛶</button>
           </div>
 
@@ -1828,6 +1824,19 @@
       placeUserMarker();
     },function(){},{timeout:8000,maximumAge:60000});
   }
+  /* ---- ปุ่ม "ไปตำแหน่งปัจจุบันของฉัน" — ถ้ามีพิกัดอยู่แล้ว (ปักหมุดตอนโหลดหน้าไปแล้ว) เลื่อนแผนที่ไปเลย
+     ถ้ายังไม่มี (ตอนโหลดขอสิทธิ์ไม่สำเร็จ) ลองขอใหม่ตรงนี้ พร้อมแจ้งเหตุผลชัดๆ ถ้ายังไม่ได้อีก ---- */
+  $("#mapLocate").addEventListener("click",function(){
+    if(userPos){gpMap.flyTo({center:[userPos.lng,userPos.lat],zoom:15});return}
+    if(!("geolocation" in navigator)){alert("อุปกรณ์นี้ไม่รองรับ GPS");return}
+    navigator.geolocation.getCurrentPosition(function(pos){
+      userPos={lat:pos.coords.latitude,lng:pos.coords.longitude};
+      placeUserMarker();
+      gpMap.flyTo({center:[userPos.lng,userPos.lat],zoom:15});
+    },function(err){
+      alert(err.code===1?"ยังไม่ได้เปิดสิทธิ์เข้าถึงตำแหน่ง — เปิดสิทธิ์ในตั้งค่าเบราว์เซอร์/แอปแล้วลองใหม่":"หาสัญญาณ GPS ไม่เจอตอนนี้ ลองใหม่อีกครั้ง");
+    },{timeout:8000,maximumAge:0});
+  });
   $("#goHome").addEventListener("click",function(){openDriverCard(places[0])});
 
   /* ---- itinerary data ---- */
@@ -3610,16 +3619,15 @@
       var isActive=t.id===activeTrip.id;
       var cal=computeCalendar(t.startDate,t.dayCount);
       var dateRange=cal.dates[1]+" – "+cal.dates[t.dayCount];
-      return '<div class="modal-card'+(isActive?'':' my-trip-open')+'" '+(isActive?'':'data-open-trip="'+t.id+'" role="button" tabindex="0"')+' style="display:flex;align-items:center;justify-content:space-between;gap:10px'+
+      return '<div class="modal-card'+(isActive?'':' my-trip-open')+'" '+(isActive?'':'data-open-trip="'+t.id+'" role="button" tabindex="0"')+' style="padding-bottom:40px'+
         (isActive?';border-color:rgba(245,158,11,.5)':';cursor:pointer')+'">'+
-        '<div style="min-width:0">'+
         '<div style="display:flex;align-items:center;gap:6px;min-width:0">'+
         '<b class="my-trip-name" title="'+esc(t.name)+'">'+esc(t.name)+'</b>'+
         (isActive?' <span class="prem-chip" style="font-size:.6rem;flex:none">'+tripStatusLabel(t)+'</span>':'')+
         '</div>'+
         '<div class="sub2" style="margin-top:2px">'+dateRange+' · '+t.dayCount+' วัน · '+stopCount+' จุดหมาย</div>'+
-        '<div class="sub2">แก้ไขล่าสุด '+new Date(t.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})+'</div></div>'+
-        '<button class="btn-ghost" data-del-trip="'+t.id+'" data-trip-name="'+esc(t.name)+'" style="flex:none">ลบ</button></div>';
+        '<div class="sub2">แก้ไขล่าสุด '+new Date(t.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})+'</div>'+
+        '<button class="btn-ghost" data-del-trip="'+t.id+'" data-trip-name="'+esc(t.name)+'" style="position:absolute;right:10px;bottom:10px">ลบ</button></div>';
     }).join("")||'<div class="sub2">ยังไม่มีทริปบันทึกไว้</div>';
   }
   $("#myTripsList").addEventListener("click",function(e){
