@@ -80,7 +80,7 @@
   .trip-card{
     border:1px solid var(--border);border-radius:var(--radius);
     background:linear-gradient(160deg,#131f38 0%,#0d1730 100%);
-    padding:16px;position:relative;overflow:hidden;
+    padding:12px 14px;position:relative;overflow:hidden;
     /* flex:none จำเป็น — overflow:hidden ทำให้ min-height เป็น 0 ใน flex column ของ .sidebar
        พอเนื้อหา drawer สูงเกินจอมือถือ การ์ดนี้จะโดนบีบแบนคนเดียว (ลูกตัวอื่น overflow ปกติจึงไม่ยุบ)
        ต้องกันไว้ให้ sidebar เลื่อน (overflow-y:auto) แทนการยุบการ์ด */
@@ -90,6 +90,8 @@
     content:"";position:absolute;inset:0;pointer-events:none;
     background:radial-gradient(320px 140px at 100% 0%, rgba(245,158,11,.14), transparent 70%);
   }
+  .my-trips{flex:none;margin-top:2px}
+  .my-trips-head{font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:8px;padding:0 4px}
   .trip-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
   .trip-city{margin:6px 0 2px;font-size:1.25rem;font-weight:700}
   .trip-city small{display:block;font-size:.72rem;font-weight:500;color:var(--muted);margin-top:2px}
@@ -98,9 +100,8 @@
     background:linear-gradient(135deg,var(--gold),var(--gold-2));
     padding:5px 10px;border-radius:999px;box-shadow:0 4px 14px rgba(245,158,11,.35);
   }
-  .trip-meta{display:flex;gap:14px;margin-top:12px;font-size:.78rem;color:var(--muted)}
-  .trip-meta b{display:block;color:var(--text);font-size:.92rem;font-weight:600}
-  .ready{margin-top:16px;cursor:pointer;border-radius:12px;padding:6px;margin-left:-6px;margin-right:-6px;transition:background .2s}
+  .trip-meta-line{font-size:.76rem;color:var(--muted);margin-top:2px}
+  .ready{margin-top:12px;cursor:pointer;border-radius:12px;padding:6px;margin-left:-6px;margin-right:-6px;transition:background .2s}
   .ready:hover{background:rgba(245,158,11,.07)}
   .ready-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
   .ready-row strong{color:var(--gold-2);font-size:1rem}
@@ -854,17 +855,11 @@
       <div class="trip-top">
         <div>
           <span class="label">ทริปปัจจุบัน</span>
-          <div class="trip-city" id="tripCityName">หูหนานครบสูตร
-            <small id="tripCitySub">จางเจียเจี้ย · เฟิ่งหวง · ฝูหรง · เทียนเหมินซาน · ฉางซา</small>
-          </div>
+          <div class="trip-city" id="tripCityName">หูหนานครบสูตร</div>
+          <div class="trip-meta-line num" id="tripMetaLine">12 – 21 ก.ย. · 10 วัน 9 คืน</div>
         </div>
         <span class="countdown num" id="tripCountdown">อีก 55 วัน</span>
       </div>
-      <div class="trip-meta num">
-        <div>วันเดินทาง<b id="tripDateRange">12 – 21 ก.ย.</b></div>
-        <div>ระยะเวลา<b id="tripDuration">10 วัน 9 คืน</b></div>
-      </div>
-      <button class="btn-ghost" id="openTrips" style="width:100%;margin-top:10px;justify-content:center">🔀 สลับ/จัดการทริป</button>
       <div class="ready" id="openReady" role="button" tabindex="0" aria-label="เปิดเช็กลิสต์ความพร้อมก่อนบิน">
         <div class="ready-row">
           <span class="label">ความพร้อมก่อนบิน ›</span>
@@ -877,9 +872,14 @@
       </div>
     </div>
 
+    <div class="my-trips" aria-label="ทริปของฉัน">
+      <div class="my-trips-head">🔀 ทริปของฉัน</div>
+      <div id="myTripsList" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
     <nav class="nav" aria-label="สลับหน้าหลัก">
       <span class="label" style="padding:0 4px">วางแผนทริป</span>
-      <button class="nav-btn" data-view="plan"><span class="ic">🗂️</span>โต๊ะวางแผนทริป <small style="margin-left:auto;color:var(--faint);font-size:.66rem">Desktop</small></button>
+      <button class="nav-btn" data-view="plan"><span class="ic">🗂️</span>โต๊ะวางแผน-แก้ไขทริป</button>
       <span class="label" style="padding:14px 4px 0">เครื่องมือเดินทาง</span>
       <button class="nav-btn active" data-view="map"><span class="ic">🗺️</span>แผนที่ท่องเที่ยว</button>
       <button class="nav-btn" data-view="itin"><span class="ic">🧭</span>แผนเที่ยวรายวัน</button>
@@ -920,8 +920,8 @@
       <!-- ---------- MAP ---------- -->
       <section class="view view-map active" id="view-map" aria-label="แผนที่ท่องเที่ยว">
         <div class="map-toolbar">
-          <select class="trip-select" id="mapTripSelect" aria-label="เลือกทริป"></select>
           <div class="city-chips" id="cityChips" role="group" aria-label="เลือกเมืองในทริปนี้"></div>
+          <select class="trip-select" id="cityJumpSelect" aria-label="ดูแผนที่เมืองอื่น"><option value="">🌍 ดูแผนที่เมืองอื่น…</option></select>
           <button class="drv-chip" id="openDriver">🚕 โชว์คนขับ</button>
           <button class="drv-chip" id="goHome">📍 พากลับที่พัก</button>
           <button class="cat-chip" id="ecoToggle">🔋 ประหยัดแบต</button>
@@ -1118,7 +1118,25 @@
       </section>
 
       <!-- ---------- PLANNING BOARD (Desktop) ---------- -->
-      <section class="view" id="view-plan" aria-label="โต๊ะวางแผนทริป">
+      <section class="view" id="view-plan" aria-label="โต๊ะวางแผน-แก้ไขทริป">
+        <div class="modal-card" style="margin-bottom:12px">
+          <div class="wp-head">➕ สร้างทริปใหม่</div>
+          <div class="trip-form-row">
+            <input type="text" id="newTripName" class="tf-text" placeholder="ชื่อทริป เช่น ปักกิ่ง-เทียนจิน-Chongli" style="margin-top:0">
+          </div>
+          <div class="trip-form-row">
+            <label>วันเริ่มทริป
+              <input type="date" id="newTripStart">
+            </label>
+            <label>จำนวนวัน
+              <input type="number" id="newTripDays" min="1" max="30" value="7">
+            </label>
+            <label>งบทริป (¥)
+              <input type="number" id="newTripBudget" min="0" step="100" value="6000">
+            </label>
+          </div>
+          <button class="btn-gold" id="createTripBtn" style="width:100%;margin-top:10px;justify-content:center">สร้างทริป</button>
+        </div>
         <div class="plan-bar">
           <button class="btn-gold" id="openImport">📥 นำเข้า Excel / CSV</button>
           <button class="btn-ghost" id="exportCsv">📤 ส่งออก CSV</button>
@@ -1444,31 +1462,6 @@
     </div>
   </div>
 
-  <div class="picker" id="tripsModal" role="dialog" aria-label="สลับหรือจัดการทริป">
-    <div class="picker-panel" style="width:min(520px,100%)">
-      <h3>🔀 ทริปของฉัน</h3>
-      <div class="sub2">สลับไปทริปอื่น หรือสร้างทริปใหม่ — บันทึกไว้ในเครื่องนี้เท่านั้น (ยังไม่ sync ข้ามอุปกรณ์)</div>
-      <div id="tripsList" style="display:flex;flex-direction:column;gap:8px;margin:12px 0"></div>
-      <div class="modal-card">
-        <div class="wp-head">➕ สร้างทริปใหม่</div>
-        <div class="trip-form-row">
-          <input type="text" id="newTripName" class="tf-text" placeholder="ชื่อทริป เช่น ปักกิ่ง-เทียนจิน-Chongli" style="margin-top:0">
-        </div>
-        <div class="trip-form-row">
-          <label>วันเริ่มทริป
-            <input type="date" id="newTripStart">
-          </label>
-          <label>จำนวนวัน
-            <input type="number" id="newTripDays" min="1" max="30" value="7">
-          </label>
-          <label>งบทริป (¥)
-            <input type="number" id="newTripBudget" min="0" step="100" value="6000">
-          </label>
-        </div>
-        <button class="btn-gold" id="createTripBtn" style="width:100%;margin-top:10px;justify-content:center">สร้างทริป</button>
-      </div>
-    </div>
-  </div>
 
   <div class="picker" id="stopModal" role="dialog" aria-label="เพิ่ม/แก้ไขจุดหมาย">
     <div class="picker-panel" style="width:min(480px,100%)">
@@ -1709,8 +1702,8 @@
   $("#mapZoomIn").addEventListener("click",function(){gpMap.zoomIn()});
   $("#mapZoomOut").addEventListener("click",function(){gpMap.zoomOut()});
 
-  /* ---- ชิปเมือง + ดรอปดาวน์ทริป (feature: กรองเมืองตามทริปที่เปิดอยู่ ไม่ปนข้ามทริป) ----
-     renderCityChips/renderTripSelect ถูกเรียกจริงจาก renderTripCardMeta() (ทำงานหลัง activeTrip
+  /* ---- ชิปเมือง (feature: กรองเมืองตามทริปที่เปิดอยู่ ไม่ปนข้ามทริป) ----
+     renderCityChips ถูกเรียกจริงจาก renderTripCardMeta() (ทำงานหลัง activeTrip
      พร้อมค่าเสมอ ไม่ใช่ตรงนี้) เพราะ activeTrip ยังไม่ถูก assign ค่าตอนบรรทัดนี้รันจริง (ประกาศอยู่ถัดไปในไฟล์) */
   function flyToCity(name){
     var msg=$("#cityMsg");
@@ -1739,16 +1732,20 @@
     c.classList.add("active");
     flyToCity(c.dataset.city);
   });
-  function renderTripSelect(){
-    var sel=$("#mapTripSelect");
-    var list=loadTripsList();
-    if(!list.some(function(t){return t.id===activeTrip.id}))
-      list=list.concat([{id:activeTrip.id,name:activeTrip.name}]);
-    sel.innerHTML=list.map(function(t){
-      return '<option value="'+esc(t.id)+'"'+(t.id===activeTrip.id?" selected":"")+'>'+esc(t.name)+"</option>";
+  /* ---- ดรอปดาวน์ "ดูแผนที่เมืองอื่น" — ทางลัดดูเฉยๆ ไม่เกี่ยวกับทริป/ชิปเมืองที่เลือกอยู่เลย ----
+     ใช้ flyToCity() เดียวกับตอนกดชิป (ปรับ welcome/fallback ของหมุดให้ตรงเมืองที่ดู) แต่ไม่แตะ
+     .city-chip.active หรือ activeTrip ใดๆ ทั้งสิ้น — ปิดจบแล้ว reset กลับ placeholder ทันที */
+  (function renderCityJumpSelect(){
+    var sel=$("#cityJumpSelect");
+    sel.innerHTML='<option value="">🌍 ดูแผนที่เมืองอื่น…</option>'+Object.keys(cityCenters).map(function(name){
+      return '<option value="'+esc(name)+'">'+esc(name)+"</option>";
     }).join("");
-  }
-  $("#mapTripSelect").addEventListener("change",function(){switchTrip(this.value)});
+  })();
+  $("#cityJumpSelect").addEventListener("change",function(){
+    if(!this.value)return;
+    flyToCity(this.value);
+    this.value="";
+  });
 
   /* ---- GPS จริง (feature 1.3): ปักหมุด "ฉันอยู่ตรงนี้" บนแผนที่จริงถ้าขอสิทธิ์สำเร็จ
      geoState/renderStatusChip ประกาศอยู่ถัดไปในไฟล์ (โหมดประหยัดแบต) — อ่านได้ปลอดภัยเพราะ
@@ -3479,15 +3476,12 @@
     return "ทริปผ่านไปแล้ว";
   }
   function renderTripCardMeta(){
-    var nameEl=$("#tripCityName"),subEl=$("#tripCitySub");
-    nameEl.childNodes[0].nodeValue=activeTrip.name+"\n            ";
-    subEl.textContent=activeTrip.sub||"ยังไม่มีรายละเอียดพื้นที่";
+    $("#tripCityName").textContent=activeTrip.name;
     var dateRange=dayDates[1]+" – "+dayDates[activeTrip.dayCount];
     var duration=activeTrip.dayCount+" วัน "+(activeTrip.dayCount-1)+" คืน";
-    $("#tripDateRange").textContent=dateRange;
-    $("#tripDuration").textContent=duration;
+    $("#tripMetaLine").textContent=dateRange+" · "+duration;
     $("#tripCountdown").textContent=computeCountdown(activeTrip);
-    renderCityChips();renderTripSelect();
+    renderCityChips();renderMyTripsList();
     renderDayStrip();
     titles.itin[1]="ทริป"+activeTrip.name+" · "+dateRange+" · "+duration;
     if($("#view-itin").classList.contains("active"))$("#viewSub").textContent=titles.itin[1];
@@ -3503,14 +3497,13 @@
     renderChecklist();renderJournalSummary();renderJournalEntries();
   }
   function switchTrip(id){
-    if(id===activeTrip.id){$("#tripsModal").classList.remove("show");return}
+    if(id===activeTrip.id)return;
     persistCurrentTrip();
     var raw=loadTripsList().find(function(x){return x.id===id});
     if(!raw)return;
     var t=normalizeTrip(raw);
     activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget,cities:t.cities||[]};
     switchToLiveData(t.days,t.backlog,t.journal,t.checklist);
-    $("#tripsModal").classList.remove("show");
     var toast=$("#planToast");
     toast.textContent="✓ สลับไปทริป \""+t.name+"\" แล้ว";toast.hidden=false;
     setTimeout(function(){toast.hidden=true},4000);
@@ -3529,7 +3522,6 @@
     switchToLiveData(blankDays,[],{spent:0,entries:[]},defaultChecklist());
     persistCurrentTrip();
     $("#newTripName").value="";
-    $("#tripsModal").classList.remove("show");
     var toast=$("#planToast");
     toast.textContent="✓ สร้างทริป \""+name+"\" ("+dayCount+" วัน) แล้ว เริ่มลากการ์ดจากคอลัมน์ไอเดีย หรือนำเข้าไฟล์ได้เลย";toast.hidden=false;
     setTimeout(function(){toast.hidden=true},5000);
@@ -3545,43 +3537,65 @@
       }
       else location.reload(); // ลบทริปสุดท้ายทิ้ง — โหลดดีโมเริ่มต้นใหม่สะอาด ๆ
     }
-    renderTripsModalList();
+    renderMyTripsList();
   }
-  function renderTripsModalList(){
-    persistCurrentTrip(); // ให้เห็นจำนวนวัน/เวลาแก้ไขล่าสุดตรงกับสถานะปัจจุบันเสมอตอนเปิดโมดัล
-    var list=loadTripsList();
-    $("#tripsList").innerHTML=list.map(function(t){
-      t=normalizeTrip(t);
+  /* ---- "ทริปของฉัน" การ์ดโชว์อยู่บน Home ตรงๆ (ไม่ต้องกดปุ่มเปิด modal อีกต่อไป)
+     เรียงทริปใกล้วันเริ่มที่สุดก่อนเสมอ — กดการ์ด = สลับทริป (ถ้าจำเป็น) + เข้าแผนที่ทันที ---- */
+  function renderMyTripsList(){
+    persistCurrentTrip(); // ให้ทริปปัจจุบันในลิสต์ตรงกับสถานะล่าสุดเสมอ
+    var list=loadTripsList().map(normalizeTrip).sort(function(a,b){
+      return new Date(a.startDate)-new Date(b.startDate);
+    });
+    $("#myTripsList").innerHTML=list.map(function(t){
       var stopCount=Object.keys(t.days||{}).reduce(function(a,n){return a+((t.days[n].s||[]).length)},0);
       var isActive=t.id===activeTrip.id;
       var cal=computeCalendar(t.startDate,t.dayCount);
       var dateRange=cal.dates[1]+" – "+cal.dates[t.dayCount];
-      return '<div class="modal-card" style="display:flex;align-items:center;justify-content:space-between;gap:10px'+
+      return '<div class="modal-card" data-open-trip="'+t.id+'" role="button" tabindex="0" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px'+
         (isActive?';border-color:rgba(245,158,11,.5)':'')+'">'+
         '<div style="min-width:0">'+'<b>'+esc(t.name)+'</b>'+(isActive?' <span class="prem-chip" style="font-size:.6rem">ปัจจุบัน</span>':'')+
-        '<div class="sub2" style="margin-top:2px">'+dateRange+' · '+t.dayCount+' วัน · '+stopCount+' จุดหมาย · แก้ไขล่าสุด '+new Date(t.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})+'</div></div>'+
-        '<div style="display:flex;gap:6px;flex:none">'+
-        (isActive?'':'<button class="btn-ghost" data-open-trip="'+t.id+'">เปิด</button>')+
-        '<button class="btn-ghost" data-del-trip="'+t.id+'">ลบ</button></div></div>';
+        '<div class="sub2" style="margin-top:2px">'+dateRange+' · '+t.dayCount+' วัน · '+stopCount+' จุดหมาย</div></div>'+
+        '<button class="icon-btn" data-del-trip="'+t.id+'" data-trip-name="'+esc(t.name)+'" aria-label="ลบทริปนี้" style="flex:none">🗑️</button></div>';
     }).join("")||'<div class="sub2">ยังไม่มีทริปบันทึกไว้</div>';
   }
-  $("#openTrips").addEventListener("click",function(){
-    renderTripsModalList();
-    if(!$("#newTripStart").value)$("#newTripStart").value=new Date().toISOString().slice(0,10);
-    $("#tripsModal").classList.add("show");
+  $("#myTripsList").addEventListener("click",function(e){
+    var delBtn=e.target.closest("[data-del-trip]");
+    if(delBtn){
+      if(confirm("ลบทริป \""+delBtn.dataset.tripName+"\" ทิ้งจริงไหม?\nแผนเที่ยว/สมุดบันทึก/เช็กลิสต์ของทริปนี้จะหายไปถาวร กู้คืนไม่ได้"))
+        deleteTrip(delBtn.dataset.delTrip);
+      return;
+    }
+    var openCard=e.target.closest("[data-open-trip]");
+    if(openCard){switchTrip(openCard.dataset.openTrip);showView("map")}
   });
-  $("#tripsModal").addEventListener("click",function(e){
-    var openBtn=e.target.closest("[data-open-trip]"),delBtn=e.target.closest("[data-del-trip]");
-    if(openBtn){switchTrip(openBtn.dataset.openTrip);return}
-    if(delBtn){deleteTrip(delBtn.dataset.delTrip);return}
-    if(!e.target.closest(".picker-panel"))$("#tripsModal").classList.remove("show");
+  $("#myTripsList").addEventListener("keydown",function(e){
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    var openCard=e.target.closest("[data-open-trip]");
+    if(openCard){e.preventDefault();switchTrip(openCard.dataset.openTrip);showView("map")}
   });
   $("#createTripBtn").addEventListener("click",function(){
+    if(!$("#newTripStart").value)$("#newTripStart").value=new Date().toISOString().slice(0,10);
     createTrip($("#newTripName").value,$("#newTripStart").value,$("#newTripDays").value,$("#newTripBudget").value);
   });
   $("#newTripName").addEventListener("keydown",function(e){
-    if(e.key==="Enter")createTrip($("#newTripName").value,$("#newTripStart").value,$("#newTripDays").value,$("#newTripBudget").value);
+    if(e.key==="Enter"){
+      if(!$("#newTripStart").value)$("#newTripStart").value=new Date().toISOString().slice(0,10);
+      createTrip($("#newTripName").value,$("#newTripStart").value,$("#newTripDays").value,$("#newTripBudget").value);
+    }
   });
+  /* ---- เลือกทริปที่ใกล้วันเริ่มที่สุดเสมอตอนเปิดแอป (แทนการจำทริปล่าสุดที่เคยเปิด) ----
+     ยังไม่ถึงวัน → เอาอันที่ diffDays น้อยสุด (ใกล้ที่สุด) · ผ่านไปหมดแล้วทุกทริป → เอาอันที่เพิ่งผ่านมาล่าสุด */
+  function pickNearestTrip(list){
+    var today=new Date();today.setHours(0,0,0,0);
+    var withDiff=list.map(function(t){
+      var start=new Date(t.startDate+"T00:00:00");
+      return {t:t,diff:Math.round((start-today)/86400000)};
+    });
+    var upcoming=withDiff.filter(function(x){return x.diff>=0});
+    var pool=upcoming.length?upcoming:withDiff;
+    pool.sort(function(a,b){return upcoming.length?a.diff-b.diff:b.diff-a.diff});
+    return pool[0].t;
+  }
   (function initTrips(){
     var list=loadTripsList();
     if(!list.length){
@@ -3591,9 +3605,7 @@
       renderJournalSummary();renderJournalEntries();
       return;
     }
-    var lastActiveId=localStorage.getItem(ACTIVE_KEY);
-    var raw=list.find(function(x){return x.id===lastActiveId})||list[0];
-    var t=normalizeTrip(raw);
+    var t=pickNearestTrip(list.map(normalizeTrip));
     activeTrip={id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget,cities:t.cities||[]};
     switchToLiveData(t.days,t.backlog,t.journal,t.checklist);
   })();
