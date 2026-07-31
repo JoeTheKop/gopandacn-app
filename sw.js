@@ -2,7 +2,7 @@
    Shell: precache + cache-first — เปิดออฟไลน์ได้ทั้งแอป (ไฟล์ HTML เดียว + asset)
    ตามแนวเดียวกับ poc/app/sw.js — same-origin cache-first, ไม่แตะไฟล์ข้าม origin (เช่น SheetJS CDN)
 */
-const SHELL_CACHE = "gopandacn-shell-v22";
+const SHELL_CACHE = "gopandacn-shell-v23";
 const SHELL = [
   "./", "./index.html",
   "./manifest.webmanifest",
@@ -153,11 +153,28 @@ async function servePmtilesRange(request) {
   });
 }
 
+// โมเดล Vosk (feature 2.1 หูฟังราคา) หนัก ~44MB — ไม่ precache รวมกับ SHELL ตอนติดตั้งแอป
+// (จะทำให้ install แรกหนักเกินจำเป็นสำหรับคนที่ไม่ใช้ฟีเจอร์นี้) แต่ยัง "โหลดครั้งเดียว ใช้ออฟไลน์ได้ตลอด"
+// ด้วย runtime caching: cache-first ปกติ ถ้า miss ก็ fetch จริงแล้วเก็บผลลง cache ก่อนคืนค่า
+// ต่างจาก path อื่นด้านล่างที่แค่ fallback ไป fetch เฉยๆ ไม่เก็บ (เพราะ path อื่นถูก precache ไว้แล้วตั้งแต่ install)
+async function serveCacheThenNetwork(request) {
+  const cache = await caches.open(SHELL_CACHE);
+  const hit = await cache.match(request, { ignoreSearch: true });
+  if (hit) return hit;
+  const resp = await fetch(request);
+  if (resp.ok) cache.put(request, resp.clone());
+  return resp;
+}
+
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return; // ปล่อย SheetJS CDN ให้ browser จัดการเอง (ไม่ vendor วันนี้)
   if (url.pathname.endsWith(".pmtiles")) {
     e.respondWith(servePmtilesRange(e.request));
+    return;
+  }
+  if (url.pathname.includes("/models/") || url.pathname.includes("/vendor/vosk/")) {
+    e.respondWith(serveCacheThenNetwork(e.request));
     return;
   }
   e.respondWith(
