@@ -25,7 +25,7 @@
       "id": "country-fill",
       "type": "fill",
       "source": "asia-outline",
-      "maxzoom": 11,
+      "maxzoom": 13,
       "paint": { "fill-color": "#101d33" }
     },
     {
@@ -40,7 +40,7 @@
       "id": "country-line",
       "type": "line",
       "source": "asia-outline",
-      "maxzoom": 11,
+      "maxzoom": 13,
       "paint": { "line-color": "#2c3f5c", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.5, 8, 1.4] }
     },
     {
