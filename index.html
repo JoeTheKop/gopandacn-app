@@ -932,6 +932,9 @@
         <div class="map-frame" id="mapFrame">
           <div id="mapCanvas" role="img" aria-label="แผนที่จริงเมืองฉางซา (MapLibre + PMTiles ออฟไลน์)"></div>
 
+          <!-- TEMP DEBUG: zoom indicator ชั่วคราว ไว้ช่วยป๋าโจรายงานระดับซูมตอนเทส เอาออกทีหลังได้ -->
+          <div id="zoomIndicator" style="position:absolute;left:14px;top:14px;z-index:5;background:rgba(0,0,0,.6);color:#facc15;font-size:.75rem;font-weight:700;padding:5px 10px;border-radius:8px;font-family:monospace">zoom: —</div>
+
           <div class="zoom-ctl">
             <button id="mapZoomIn" aria-label="ซูมเข้า">＋</button>
             <button id="mapZoomOut" aria-label="ซูมออก">－</button>
@@ -1763,6 +1766,12 @@
     if(z>=12)return;
     gpMap.flyTo({center:e.lngLat,zoom:Math.min(14,z+4),speed:1.2,curve:1.4});
   });
+  /* TEMP DEBUG: อัปเดตตัวเลขซูมสด ๆ ไว้ช่วยรายงานผลตอนเทส เอาออกทีหลังได้ */
+  function updateZoomIndicator(){$("#zoomIndicator").textContent="zoom: "+gpMap.getZoom().toFixed(2)}
+  gpMap.on("zoom",updateZoomIndicator);
+  gpMap.on("move",updateZoomIndicator);
+  gpMap.on("load",updateZoomIndicator);
+  updateZoomIndicator();
   $("#mapZoomIn").addEventListener("click",function(){gpMap.zoomIn()});
   $("#mapZoomOut").addEventListener("click",function(){gpMap.zoomOut()});
   $("#mapFullscreen").addEventListener("click",function(){
