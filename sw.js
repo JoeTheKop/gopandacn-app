@@ -1,8 +1,10 @@
 /* GoPandaCN Flagship Service Worker (feature 1.1)
    Shell: precache + cache-first — เปิดออฟไลน์ได้ทั้งแอป (ไฟล์ HTML เดียว + asset)
-   ตามแนวเดียวกับ poc/app/sw.js — same-origin cache-first, ไม่แตะไฟล์ข้าม origin (เช่น SheetJS CDN)
+   ตามแนวเดียวกับ poc/app/sw.js — same-origin cache-first เท่านั้น (SheetJS/ExcelJS เคย
+   โหลดจาก CDN ต่างประเทศตรงๆ ซึ่งบล็อก/ช้ามากในจีน — vendor เข้ามาเองแล้ว โหลดแบบ lazy
+   เฉพาะตอนใช้ฟีเจอร์ Excel เท่านั้น ดู loadScriptOnce() ใน gopandacn-prototype.html)
 */
-const SHELL_CACHE = "gopandacn-shell-v44";
+const SHELL_CACHE = "gopandacn-shell-v48";
 const SHELL = [
   "./", "./index.html",
   "./manifest.webmanifest",
@@ -169,12 +171,13 @@ async function serveCacheThenNetwork(request) {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  if (url.origin !== location.origin) return; // ปล่อย SheetJS CDN ให้ browser จัดการเอง (ไม่ vendor วันนี้)
+  if (url.origin !== location.origin) return; // ไม่มี cross-origin asset เหลืออยู่แล้ว (SheetJS/ExcelJS vendor เข้ามาเองแล้ว)
   if (url.pathname.endsWith(".pmtiles")) {
     e.respondWith(servePmtilesRange(e.request));
     return;
   }
-  if (url.pathname.includes("/models/") || url.pathname.includes("/vendor/vosk/")) {
+  if (url.pathname.includes("/models/") || url.pathname.includes("/vendor/vosk/") ||
+      url.pathname.includes("/vendor/sheetjs/") || url.pathname.includes("/vendor/exceljs/")) {
     e.respondWith(serveCacheThenNetwork(e.request));
     return;
   }

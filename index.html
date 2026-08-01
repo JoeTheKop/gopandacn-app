@@ -206,7 +206,7 @@
   .map-frame.fullscreen{position:fixed;inset:0;z-index:200;border-radius:0;border:none}
   .map-frame svg{position:absolute;inset:0;width:100%;height:100%}
   #mapCanvas{position:absolute;inset:0;width:100%;height:100%}
-  .gp-pin{width:26px;height:26px;cursor:pointer;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
+  .gp-pin{width:30px;height:30px;cursor:pointer;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
   .gp-pin svg{width:100%;height:100%}
   .gp-pin.selected{filter:drop-shadow(0 2px 5px rgba(245,158,11,.6)) drop-shadow(0 0 0 2px #f59e0b)}
   .gp-user-dot{width:16px;height:16px;border-radius:50%;background:#22d3ee;border:2px solid #083344;
@@ -282,9 +282,16 @@
   .stop-card{
     border:1px solid var(--border);border-radius:14px;background:var(--panel);
     padding:13px 15px;display:flex;gap:12px;align-items:flex-start;
-    transition:border-color .2s,transform .2s;cursor:pointer;
   }
-  .stop-card:hover{border-color:rgba(245,158,11,.4);transform:translateX(3px)}
+  .doc-attach{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+  .doc-attach-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .doc-attach-head .label{font-size:.8rem;font-weight:700}
+  .doc-list{display:flex;flex-direction:column;gap:6px}
+  .doc-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2,rgba(255,255,255,.03))}
+  .doc-item .doc-ic{flex:none;font-size:1.1rem}
+  .doc-item .doc-name{flex:1;min-width:0;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;text-decoration:underline dotted}
+  .doc-item .doc-size{flex:none;font-size:.68rem;color:var(--muted)}
+  .doc-item .doc-del{flex:none;background:none;border:none;color:#f87171;cursor:pointer;font-size:.9rem;padding:2px 4px}
   .stop-time{flex:none;font-weight:700;color:var(--gold-2);font-size:.85rem;min-width:48px}
   .stop-body h4{margin:0 0 3px;font-size:.93rem}
   .stop-body p{margin:0;font-size:.77rem;color:var(--muted);line-height:1.55}
@@ -565,6 +572,20 @@
   }
   .picker-panel h3{margin:0;font-size:.98rem}
   .picker-panel .sub2{font-size:.73rem;color:var(--muted);margin-bottom:4px}
+  /* ---- ล็อกแอปด้วย PIN — คลุมทั้งจอ กดข้างนอกปิดไม่ได้ (ต่างจาก .picker ทั่วไป) ---- */
+  .lock-screen{
+    position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;
+    background:var(--bg);padding:18px;
+  }
+  .lock-screen.show{display:flex}
+  .lock-panel{width:min(360px,100%);text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+  .lock-panel img{width:64px;height:64px;border-radius:16px}
+  .lock-pin-input{
+    width:100%;font-size:1.4rem;letter-spacing:.5em;text-align:center;padding:14px;
+    border-radius:12px;border:1px solid var(--border);background:var(--panel);color:var(--text);
+  }
+  .lock-error{color:#f87171;font-size:.78rem;min-height:1.2em}
+  .lock-forgot{background:none;border:none;color:var(--muted);font-size:.75rem;text-decoration:underline;cursor:pointer}
   .place-btn{
     display:flex;align-items:center;gap:12px;text-align:left;width:100%;
     border:1px solid var(--border);border-radius:14px;background:rgba(30,41,59,.4);
@@ -853,6 +874,7 @@
         <h1>GoPanda<span>CN</span> <span class="prem-chip" id="premChip" hidden>PREMIUM</span></h1>
         <p>เที่ยวจีนอัจฉริยะ แม้ไร้สัญญาณ</p>
       </div>
+      <button class="icon-btn" id="lockSettingsBtn" style="margin-left:auto" title="ตั้ง/เปลี่ยนรหัสล็อกแอป" aria-label="ตั้งรหัสล็อกแอป">🔒</button>
     </div>
 
     <div class="trip-card">
@@ -962,7 +984,7 @@
           <span class="sub num" id="itinMeta">5 จุดหมาย · เดินรวม 4.2 กม.</span>
         </div>
         <div class="timeline" id="timeline"></div>
-        <button class="add-stop" id="addStopBtn">＋ เพิ่มจุดหมายในวันนี้</button>
+        <div class="sub2" style="text-align:center;margin-top:8px">ดูข้อมูลอย่างเดียว — แก้ไขแผนได้ที่ "โต๊ะวางแผน-แก้ไขทริป" 🗂️</div>
       </section>
 
       <!-- ---------- JOURNAL ---------- -->
@@ -1193,6 +1215,14 @@
             <span class="book-foot"><span class="aff-note">รีวิวคนไทยเพียบ</span><span class="book-go">จองเลย ↗</span></span>
           </a>
         </div>
+
+        <div class="itin-head" style="margin:14px 2px 0">
+          <h3>📎 เอกสารประจำทริป · <em>ตั๋วเครื่องบิน พาสปอร์ต ประกันเดินทาง ฯลฯ</em></h3>
+          <button class="btn-ghost" id="tripDocAddBtn" style="padding:5px 12px;font-size:.7rem">＋ แนบไฟล์</button>
+        </div>
+        <input type="file" id="tripDocInput" accept="image/*,.pdf" multiple hidden>
+        <div class="doc-list" id="tripDocList"></div>
+        <div class="sub2" style="margin:4px 2px 0">รองรับรูปภาพ/PDF สูงสุด 5MB ต่อไฟล์ — แนบได้หลายไฟล์ · เก็บไว้ในเครื่องนี้เท่านั้น</div>
 
         <div class="board" id="board" aria-label="บอร์ดวางแผนรายวัน"></div>
       </section>
@@ -1486,6 +1516,42 @@
   </div>
 
 
+  <div class="lock-screen" id="lockScreen" role="dialog" aria-modal="true" aria-label="ปลดล็อกแอป">
+    <div class="lock-panel">
+      <img src="assets/mascot-64.png" alt="หลิงหลิง">
+      <h3 style="margin:0">🔒 แอปถูกล็อกไว้</h3>
+      <div class="sub2">กรอกรหัส PIN เพื่อเข้าใช้งาน</div>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="lockPinInput" class="lock-pin-input" placeholder="••••" autocomplete="off">
+      <button class="btn-gold" id="lockUnlockBtn" style="width:100%;justify-content:center">ปลดล็อก</button>
+      <div class="lock-error" id="lockError"></div>
+      <button class="lock-forgot" id="lockForgotBtn" type="button">ลืมรหัส?</button>
+    </div>
+  </div>
+
+  <div class="picker" id="lockSettingsModal" role="dialog" aria-label="ตั้งค่ารหัสล็อกแอป">
+    <div class="picker-panel" style="width:min(400px,100%)">
+      <h3 id="lockSettingsTitle">🔒 ตั้งรหัสล็อกแอป</h3>
+      <div class="sub2">ป้องกันคนอื่นเปิดแอปเห็นข้อมูลทริป/บัตรสุขภาพ ถ้าหยิบมือถือไปตอนไม่ได้ล็อกหน้าจอ</div>
+      <div class="modal-card">
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">รหัส PIN ใหม่ (4-6 หลัก)
+            <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="lockNewPin" class="tf-text" placeholder="••••">
+          </label>
+        </div>
+        <div class="trip-form-row">
+          <label style="flex-basis:100%">ยืนยันรหัส PIN อีกครั้ง
+            <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="lockConfirmPin" class="tf-text" placeholder="••••">
+          </label>
+        </div>
+        <div class="lock-error" id="lockSettingsError"></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn-ghost" id="lockRemoveBtn" style="display:none;color:#f87171;border-color:#f87171">🗑️ ปิดการล็อก</button>
+          <button class="btn-gold" id="lockSaveBtn" style="flex:1;justify-content:center">บันทึก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="picker" id="stopModal" role="dialog" aria-label="เพิ่ม/แก้ไขจุดหมาย">
     <div class="picker-panel" style="width:min(480px,100%)">
       <h3 id="stopModalTitle">➕ เพิ่มจุดหมาย</h3>
@@ -1518,6 +1584,15 @@
           <label>งบ (¥, ไม่ใส่ก็ได้)
             <input type="number" id="stopBudget" class="tf-text" min="0" step="1">
           </label>
+        </div>
+        <div class="doc-attach">
+          <div class="doc-attach-head">
+            <span class="label">📎 เอกสารแนบ</span>
+            <button class="btn-ghost" id="stopDocAddBtn" type="button" style="padding:5px 12px;font-size:.7rem">＋ แนบไฟล์</button>
+          </div>
+          <input type="file" id="stopDocInput" accept="image/*,.pdf" multiple hidden>
+          <div class="doc-list" id="stopDocList"></div>
+          <div class="sub2" id="stopDocHint">รองรับรูปภาพ/PDF สูงสุด 5MB ต่อไฟล์ — แนบได้หลายไฟล์</div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn-ghost" id="stopDeleteBtn" style="display:none;color:#f87171;border-color:#f87171">🗑️ ลบจุดนี้</button>
@@ -1576,12 +1651,167 @@
 <script src="vendor/pmtiles/pmtiles.js"></script>
 <script src="vendor/maplibre/maplibre-gl.js"></script>
 <script src="vendor/vosk/vosk.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 (function(){
   var $=function(s,c){return (c||document).querySelector(s)};
   var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
+
+  function uid(prefix){return (prefix||"id_")+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
+
+  /* ---- โหลดสคริปต์หนักแบบ lazy เฉพาะตอนใช้จริง (SheetJS/ExcelJS) — vendor เข้ามาเองแทน CDN ต่างประเทศ
+     เพราะ cdn.sheetjs.com/cdn.jsdelivr.net เข้าไม่ได้/ช้ามากในจีน ถ้าโหลดตอนเปิดแอปจะบล็อกทั้งแอปรอ timeout
+     ก่อนหน้านี้ ตอนนี้โหลดเฉพาะตอนกดนำเข้า/ส่งออก Excel เท่านั้น + cache ไว้ใน SW ให้ใช้ออฟไลน์ได้ครั้งถัดไป ---- */
+  var scriptLoadPromises={};
+  function loadScriptOnce(src){
+    if(scriptLoadPromises[src])return scriptLoadPromises[src];
+    scriptLoadPromises[src]=new Promise(function(resolve,reject){
+      var s=document.createElement("script");
+      s.src=src;
+      s.onload=function(){resolve()};
+      s.onerror=function(){delete scriptLoadPromises[src];reject(new Error("โหลด "+src+" ไม่สำเร็จ"))};
+      document.body.appendChild(s);
+    });
+    return scriptLoadPromises[src];
+  }
+
+  /* ---- เอกสารแนบ (ตั๋ว/ใบจอง ฯลฯ) เก็บเป็น Blob ดิบใน IndexedDB — ไม่ผ่าน base64/localStorage
+     เพราะไฟล์ภาพ/PDF กิน quota ของ localStorage หมดเร็วมาก ---- */
+  var DOC_DB_NAME="gopanda_docs_v1",DOC_STORE="files",DOC_MAX_BYTES=5*1024*1024;
+  var docDbP=null;
+  function docDb(){
+    if(docDbP)return docDbP;
+    docDbP=new Promise(function(resolve,reject){
+      var req=indexedDB.open(DOC_DB_NAME,1);
+      req.onupgradeneeded=function(){
+        var db=req.result;
+        if(!db.objectStoreNames.contains(DOC_STORE)){
+          var st=db.createObjectStore(DOC_STORE,{keyPath:"id"});
+          st.createIndex("byTrip","tripId",{unique:false});
+        }
+      };
+      req.onsuccess=function(){resolve(req.result)};
+      req.onerror=function(){reject(req.error)};
+    });
+    return docDbP;
+  }
+  function docAdd(tripId,stopId,file){
+    if(file.size>DOC_MAX_BYTES)return Promise.reject(new Error("ไฟล์ใหญ่เกิน 5MB"));
+    var rec={id:uid("doc_"),tripId:tripId,stopId:stopId||null,name:file.name,type:file.type,size:file.size,blob:file,addedAt:Date.now()};
+    return docDb().then(function(db){
+      return new Promise(function(resolve,reject){
+        var tx=db.transaction(DOC_STORE,"readwrite");
+        tx.objectStore(DOC_STORE).add(rec);
+        tx.oncomplete=function(){resolve(rec)};
+        tx.onerror=function(){reject(tx.error)};
+      });
+    });
+  }
+  function docList(tripId,stopId){
+    return docDb().then(function(db){
+      return new Promise(function(resolve,reject){
+        var out=[];
+        var tx=db.transaction(DOC_STORE,"readonly");
+        var idx=tx.objectStore(DOC_STORE).index("byTrip");
+        var req=idx.openCursor(IDBKeyRange.only(tripId));
+        req.onsuccess=function(){
+          var cur=req.result;
+          if(!cur){resolve(out);return}
+          if(stopId===undefined||cur.value.stopId===(stopId||null))out.push(cur.value);
+          cur.continue();
+        };
+        req.onerror=function(){reject(req.error)};
+      });
+    });
+  }
+  function docGet(id){
+    return docDb().then(function(db){
+      return new Promise(function(resolve,reject){
+        var tx=db.transaction(DOC_STORE,"readonly");
+        var req=tx.objectStore(DOC_STORE).get(id);
+        req.onsuccess=function(){resolve(req.result)};
+        req.onerror=function(){reject(req.error)};
+      });
+    });
+  }
+  function docDelete(id){
+    return docDb().then(function(db){
+      return new Promise(function(resolve,reject){
+        var tx=db.transaction(DOC_STORE,"readwrite");
+        tx.objectStore(DOC_STORE).delete(id);
+        tx.oncomplete=function(){resolve()};
+        tx.onerror=function(){reject(tx.error)};
+      });
+    });
+  }
+
+  /* ---- ล็อกแอปด้วย PIN — ทางเลือก ไม่บังคับตั้ง กันคนอื่นหยิบมือถือแล้วเห็นข้อมูลทริป/บัตรสุขภาพ
+     เก็บแค่ hash(salt+PIN) ไม่เก็บ PIN ตรงๆ · ไม่มีเซิร์ฟเวอร์เลยจึงกู้รหัสลืมไม่ได้ — มีปุ่ม "ลืมรหัส" รีเซ็ตแอปแทน ---- */
+  var LOCK_KEY="gopanda_lock_v1",UNLOCK_SESSION_KEY="gopanda_unlocked_v1";
+  function sha256Hex(str){
+    return crypto.subtle.digest("SHA-256",new TextEncoder().encode(str)).then(function(buf){
+      return Array.prototype.map.call(new Uint8Array(buf),function(b){return b.toString(16).padStart(2,"0")}).join("");
+    });
+  }
+  function getLockConfig(){try{return JSON.parse(localStorage.getItem(LOCK_KEY))}catch(e){return null}}
+  function isLocked(){return !!getLockConfig()&&!sessionStorage.getItem(UNLOCK_SESSION_KEY)}
+  function showLockScreen(){
+    $("#lockScreen").classList.add("show");
+    $("#lockError").textContent="";
+    $("#lockPinInput").value="";
+    setTimeout(function(){$("#lockPinInput").focus()},50);
+  }
+  function hideLockScreen(){$("#lockScreen").classList.remove("show")}
+  if(isLocked())showLockScreen();
+  $("#lockUnlockBtn").addEventListener("click",function(){
+    var cfg=getLockConfig(),pin=$("#lockPinInput").value.trim();
+    if(!cfg){hideLockScreen();return}
+    sha256Hex(cfg.salt+pin).then(function(hash){
+      if(hash===cfg.hash){
+        sessionStorage.setItem(UNLOCK_SESSION_KEY,"1");
+        hideLockScreen();
+      }else{
+        $("#lockError").textContent="รหัส PIN ไม่ถูกต้อง ลองอีกครั้ง";
+        $("#lockPinInput").value="";$("#lockPinInput").focus();
+      }
+    });
+  });
+  $("#lockPinInput").addEventListener("keydown",function(e){if(e.key==="Enter")$("#lockUnlockBtn").click()});
+  $("#lockForgotBtn").addEventListener("click",function(){
+    if(!confirm("ลืมรหัส PIN?\n\nการกดยืนยันจะล้างข้อมูลทริป/เอกสารแนบทั้งหมดในเครื่องนี้ถาวร (กู้คืนไม่ได้ ยกเว้นเคยส่งออกไฟล์ .gopanda/Excel สำรองไว้)\n\nต้องการล้างข้อมูลแล้วเริ่มใหม่ใช่ไหม?"))return;
+    localStorage.clear();
+    sessionStorage.clear();
+    indexedDB.deleteDatabase(DOC_DB_NAME);
+    caches.keys().then(function(keys){
+      return Promise.all(keys.map(function(k){return caches.delete(k)}));
+    }).then(function(){location.reload()});
+  });
+  $("#lockSettingsBtn").addEventListener("click",function(){
+    var cfg=getLockConfig();
+    $("#lockSettingsTitle").textContent=cfg?"🔒 เปลี่ยน/ปิดรหัสล็อกแอป":"🔒 ตั้งรหัสล็อกแอป";
+    $("#lockRemoveBtn").style.display=cfg?"":"none";
+    $("#lockNewPin").value="";$("#lockConfirmPin").value="";$("#lockSettingsError").textContent="";
+    $("#lockSettingsModal").classList.add("show");
+  });
+  $("#lockSaveBtn").addEventListener("click",function(){
+    var p1=$("#lockNewPin").value.trim(),p2=$("#lockConfirmPin").value.trim();
+    if(!/^\d{4,6}$/.test(p1)){$("#lockSettingsError").textContent="รหัส PIN ต้องเป็นตัวเลข 4-6 หลัก";return}
+    if(p1!==p2){$("#lockSettingsError").textContent="รหัส PIN ทั้งสองช่องไม่ตรงกัน";return}
+    var salt=Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(16)),function(b){return b.toString(16).padStart(2,"0")}).join("");
+    sha256Hex(salt+p1).then(function(hash){
+      localStorage.setItem(LOCK_KEY,JSON.stringify({salt:salt,hash:hash}));
+      sessionStorage.setItem(UNLOCK_SESSION_KEY,"1"); // ตั้งรหัสใหม่แล้วไม่ต้องให้ล็อกตัวเองออกทันที
+      $("#lockSettingsModal").classList.remove("show");
+    });
+  });
+  $("#lockRemoveBtn").addEventListener("click",function(){
+    if(!confirm("ปิดการล็อกแอป? ใครก็เปิดแอปนี้เข้าดูข้อมูลทริปได้เลยโดยไม่ต้องใส่รหัส"))return;
+    localStorage.removeItem(LOCK_KEY);
+    sessionStorage.removeItem(UNLOCK_SESSION_KEY);
+    $("#lockSettingsModal").classList.remove("show");
+  });
+  $("#lockSettingsModal").addEventListener("click",function(e){
+    if(!e.target.closest(".picker-panel"))$("#lockSettingsModal").classList.remove("show");
+  });
 
   /* ---- view switching ---- */
   var titles={
@@ -1778,7 +2008,7 @@
       var pinColors={station:["#22d3ee","#083344"],hotel:["#a78bfa","#4c1d95"],attraction:["#f59e0b","#78350f"]};
       var pc=pinColors[d.type]||pinColors.attraction;
       el.className="gp-pin"+(d.type?" gp-pin-"+d.type:"")+(id==="ifs"?" selected":"");
-      el.innerHTML='<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="'+pc[0]+'" stroke="'+pc[1]+'" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>';
+      el.innerHTML='<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="'+pc[0]+'" stroke="'+pc[1]+'" stroke-width="1"/><circle cx="11" cy="11" r="8" fill="#0f172a"/><text x="11" y="11.5" text-anchor="middle" dominant-baseline="central" font-size="10">'+d.ic+'</text></svg>';
       el.setAttribute("role","button");el.setAttribute("tabindex","0");
       el.setAttribute("aria-label","หมุด: "+d.title);
       el.addEventListener("click",function(){selectPin(id)});
@@ -2013,7 +2243,7 @@
     $("#itinTitle").innerHTML="วัน "+n+" · <em>"+d.t+"</em>";
     $("#itinMeta").textContent=d.m;
     tl.innerHTML=d.s.map(function(s,idx){
-      return '<div class="stop"><div class="stop-card" data-idx="'+idx+'" role="button" tabindex="0" aria-label="แก้ไขจุดหมายนี้">'+
+      return '<div class="stop"><div class="stop-card">'+
         '<div class="stop-time num">'+esc(s[0])+'</div>'+
         '<div class="stop-body"><h4>'+esc(s[1])+'</h4><p>'+esc(s[2])+'</p>'+
         '<span class="tag '+s[3][0]+'">'+esc(s[3][1])+'</span>'+
@@ -2039,12 +2269,13 @@
     renderDay(+c.dataset.day);
   });
 
-  /* ---- เพิ่ม/แก้ไข/ลบจุดหมายในแผนรายวัน ---- */
-  var stopEditCtx=null; // {day,idx} — idx เป็น null เมื่อกำลังเพิ่มใหม่
-  function openStopModal(dayNum,idx){
-    var d=getDay(dayNum);
-    var s=(idx!=null)?d.s[idx]:null;
-    stopEditCtx={day:dayNum,idx:idx};
+  /* ---- เพิ่ม/แก้ไข/ลบจุดหมาย — แก้ไขได้เฉพาะจากโต๊ะวางแผน (บอร์ด) เท่านั้น
+     แผนเที่ยวรายวันเป็นหน้าดูอย่างเดียว (read-only) ตามที่ป๋าโจต้องการ ---- */
+  var stopEditCtx=null; // {ci,idx} — ci: 0=ไอเดีย(backlog), 1..N=วัน · idx เป็น null เมื่อกำลังเพิ่มใหม่
+  function openStopModal(ci,idx){
+    var arr=colArr(ci);
+    var s=(idx!=null)?arr[idx]:null;
+    stopEditCtx={ci:ci,idx:idx,pendingStopId:s?s[5]:uid("s_")};
     $("#stopModalTitle").textContent=s?"✏️ แก้ไขจุดหมาย":"➕ เพิ่มจุดหมาย";
     $("#stopTime").value=(s&&s[0]!=="--")?s[0]:"";
     $("#stopPlace").value=s?s[1]:"";
@@ -2054,18 +2285,17 @@
     $("#stopDeleteBtn").style.display=s?"":"none";
     $("#stopModal").classList.add("show");
     $("#stopPlace").focus();
+    renderStopDocs();
   }
-  function closeStopModal(){$("#stopModal").classList.remove("show");stopEditCtx=null}
-  $("#addStopBtn").addEventListener("click",function(){openStopModal(curDay,null)});
-  $("#timeline").addEventListener("click",function(e){
-    var card=e.target.closest(".stop-card[data-idx]");if(!card)return;
-    openStopModal(curDay,+card.dataset.idx);
-  });
-  $("#timeline").addEventListener("keydown",function(e){
-    if(e.key!=="Enter"&&e.key!==" ")return;
-    var card=e.target.closest(".stop-card[data-idx]");if(!card)return;
-    e.preventDefault();openStopModal(curDay,+card.dataset.idx);
-  });
+  function closeStopModal(){
+    // ถ้าปิดโดยไม่ได้บันทึกจุดหมายใหม่ ให้เคลียร์ไฟล์แนบที่อัปโหลดค้างไว้ (กันไฟล์กำพร้าใน IndexedDB)
+    if(stopEditCtx&&!stopEditCtx.saved&&stopEditCtx.idx==null){
+      docList(activeTrip.id,stopEditCtx.pendingStopId).then(function(list){
+        list.forEach(function(f){docDelete(f.id)});
+      });
+    }
+    $("#stopModal").classList.remove("show");stopEditCtx=null;
+  }
   $("#stopModal").addEventListener("click",function(e){
     if(!e.target.closest(".picker-panel"))closeStopModal();
   });
@@ -2074,20 +2304,69 @@
     if(!place){$("#stopPlace").focus();return}
     var catLabel=$("#stopCat").value;
     var budget=$("#stopBudget").value?Number($("#stopBudget").value):null;
-    var entry=[$("#stopTime").value||"--",place,$("#stopDesc").value.trim(),catMap[catLabel]||["spot","ที่เที่ยว"],budget];
-    var d=getDay(stopEditCtx.day);
-    if(stopEditCtx.idx!=null)d.s[stopEditCtx.idx]=entry;else d.s.push(entry);
-    sortDay(stopEditCtx.day);
+    var entry=[$("#stopTime").value||"--",place,$("#stopDesc").value.trim(),catMap[catLabel]||["spot","ที่เที่ยว"],budget,stopEditCtx.pendingStopId];
+    var arr=colArr(stopEditCtx.ci);
+    if(stopEditCtx.idx!=null)arr[stopEditCtx.idx]=entry;else arr.push(entry);
+    if(stopEditCtx.ci>0)sortDay(stopEditCtx.ci);
+    stopEditCtx.saved=true;
     persistCurrentTrip();
-    renderBoard();renderDay(stopEditCtx.day);renderDayStrip();
+    renderBoard();renderDay(curDay);renderDayStrip();
     closeStopModal();
   });
   $("#stopDeleteBtn").addEventListener("click",function(){
-    var d=getDay(stopEditCtx.day);
-    d.s.splice(stopEditCtx.idx,1);
+    var arr=colArr(stopEditCtx.ci);
+    arr.splice(stopEditCtx.idx,1);
+    docList(activeTrip.id,stopEditCtx.pendingStopId).then(function(list){
+      list.forEach(function(f){docDelete(f.id)});
+    });
+    stopEditCtx.saved=true; // จุดหมายถูกลบแล้ว ไม่ต้องให้ closeStopModal() เคลียร์ไฟล์ซ้ำ
     persistCurrentTrip();
-    renderBoard();renderDay(stopEditCtx.day);renderDayStrip();
+    renderBoard();renderDay(curDay);renderDayStrip();
     closeStopModal();
+  });
+
+  /* ---- เอกสารแนบระดับจุดหมาย (ในตัว stopModal) ---- */
+  function fmtBytes(n){return n<1024?n+" B":n<1048576?Math.round(n/1024)+" KB":(n/1048576).toFixed(1)+" MB"}
+  function renderStopDocs(){
+    var box=$("#stopDocList");
+    if(!stopEditCtx){box.innerHTML="";return}
+    docList(activeTrip.id,stopEditCtx.pendingStopId).then(function(list){
+      if(!stopEditCtx)return; // ปิด modal ไปแล้วระหว่างรอโหลด
+      box.innerHTML=list.map(function(f){
+        var ic=f.type==="application/pdf"?"📄":"🖼️";
+        return '<div class="doc-item"><span class="doc-ic">'+ic+'</span>'+
+          '<span class="doc-name" data-view-doc="'+f.id+'" title="เปิดดู · '+esc(f.name)+'">'+esc(f.name)+'</span>'+
+          '<span class="doc-size num">'+fmtBytes(f.size)+'</span>'+
+          '<button class="doc-del" data-del-doc="'+f.id+'" aria-label="ลบไฟล์นี้" title="ลบไฟล์นี้">🗑️</button></div>';
+      }).join("");
+    });
+  }
+  $("#stopDocAddBtn").addEventListener("click",function(){$("#stopDocInput").click()});
+  $("#stopDocInput").addEventListener("change",function(){
+    var files=Array.prototype.slice.call(this.files||[]);
+    this.value="";
+    if(!files.length||!stopEditCtx)return;
+    var tripId=activeTrip.id,stopId=stopEditCtx.pendingStopId;
+    Promise.all(files.map(function(f){
+      if(f.size>DOC_MAX_BYTES){alert('ไฟล์ "'+f.name+'" ใหญ่เกิน 5MB ข้ามไฟล์นี้ไปนะครับ');return null}
+      return docAdd(tripId,stopId,f);
+    })).then(renderStopDocs);
+  });
+  $("#stopDocList").addEventListener("click",function(e){
+    var del=e.target.closest("[data-del-doc]");
+    if(del){
+      if(confirm("ลบไฟล์นี้?"))docDelete(del.dataset.delDoc).then(renderStopDocs);
+      return;
+    }
+    var view=e.target.closest("[data-view-doc]");
+    if(view){
+      docGet(view.dataset.viewDoc).then(function(rec){
+        if(!rec)return;
+        var url=URL.createObjectURL(rec.blob);
+        window.open(url,"_blank");
+        setTimeout(function(){URL.revokeObjectURL(url)},60000);
+      });
+    }
   });
 
   /* ---- chat: หลิงหลิง Router ชั้น 1 (engine เดียวกับ POC — ตอบจากแพ็กจริง) ---- */
@@ -2947,9 +3226,13 @@
     if(mv){moveItem(+mv.dataset.ci,+mv.dataset.i,+mv.dataset.ci+(+mv.dataset.mv));return}
     var ad=e.target.closest("[data-add]");
     if(ad){
-      colArr(+ad.dataset.add).push(["--","📍 จุดหมายใหม่","แตะเพื่อแก้ไขได้ในแอปจริง",["spot","ที่เที่ยว"]]);
+      colArr(+ad.dataset.add).push(["--","📍 จุดหมายใหม่","แตะเพื่อแก้ไขได้ในแอปจริง",["spot","ที่เที่ยว"],null,uid("s_")]);
       renderBoard();renderDay(curDay);
+      return;
     }
+    if(e.target.closest("a"))return; // ลิงก์จอง — ให้เปิดแท็บใหม่ตามปกติ ไม่ต้องเปิด modal
+    var bc=e.target.closest(".bcard");
+    if(bc)openStopModal(+bc.dataset.ci,+bc.dataset.i);
   });
   /* drag & drop */
   var dragSrc=null;
@@ -2980,6 +3263,48 @@
     dragSrc=null;
   });
   renderBoard();
+
+  /* ---- เอกสารแนบระดับทริปทั้งก้อน (ตั๋วเครื่องบิน พาสปอร์ต ฯลฯ — ไม่ผูกกับจุดหมายไหนโดยเฉพาะ) ---- */
+  function renderTripDocs(){
+    var box=$("#tripDocList");
+    docList(activeTrip.id,null).then(function(list){
+      box.innerHTML=list.map(function(f){
+        var ic=f.type==="application/pdf"?"📄":"🖼️";
+        return '<div class="doc-item"><span class="doc-ic">'+ic+'</span>'+
+          '<span class="doc-name" data-view-tdoc="'+f.id+'" title="เปิดดู · '+esc(f.name)+'">'+esc(f.name)+'</span>'+
+          '<span class="doc-size num">'+fmtBytes(f.size)+'</span>'+
+          '<button class="doc-del" data-del-tdoc="'+f.id+'" aria-label="ลบไฟล์นี้" title="ลบไฟล์นี้">🗑️</button></div>';
+      }).join("")||'<div class="sub2">ยังไม่มีเอกสารแนบ</div>';
+    });
+  }
+  $("#tripDocAddBtn").addEventListener("click",function(){$("#tripDocInput").click()});
+  $("#tripDocInput").addEventListener("change",function(){
+    var files=Array.prototype.slice.call(this.files||[]);
+    this.value="";
+    if(!files.length)return;
+    var tripId=activeTrip.id;
+    Promise.all(files.map(function(f){
+      if(f.size>DOC_MAX_BYTES){alert('ไฟล์ "'+f.name+'" ใหญ่เกิน 5MB ข้ามไฟล์นี้ไปนะครับ');return null}
+      return docAdd(tripId,null,f);
+    })).then(renderTripDocs);
+  });
+  $("#tripDocList").addEventListener("click",function(e){
+    var del=e.target.closest("[data-del-tdoc]");
+    if(del){
+      if(confirm("ลบไฟล์นี้?"))docDelete(del.dataset.delTdoc).then(renderTripDocs);
+      return;
+    }
+    var view=e.target.closest("[data-view-tdoc]");
+    if(view){
+      docGet(view.dataset.viewTdoc).then(function(rec){
+        if(!rec)return;
+        var url=URL.createObjectURL(rec.blob);
+        window.open(url,"_blank");
+        setTimeout(function(){URL.revokeObjectURL(url)},60000);
+      });
+    }
+  });
+  renderTripDocs();
 
   /* ---- import Excel/CSV ---- */
   var importModal=$("#importModal"),parsedRows=null;
@@ -3029,24 +3354,25 @@
       parsedRows=null;
       $("#impPreview").style.display="flex";
       $("#impTable").innerHTML="";
-      $("#impMsg").textContent="กำลังอ่านไฟล์ Excel...";
-      if(typeof XLSX==="undefined"){
+      $("#impMsg").textContent="กำลังโหลดตัวอ่าน Excel...";
+      loadScriptOnce("vendor/sheetjs/xlsx.full.min.js").then(function(){
+        $("#impMsg").textContent="กำลังอ่านไฟล์ Excel...";
+        var rd=new FileReader();
+        rd.onload=function(){
+          try{
+            var wb=XLSX.read(rd.result,{type:"array"});
+            var ws=wb.Sheets[wb.SheetNames[0]];
+            var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:""})
+              .map(function(r){return r.map(function(c){return String(c==null?"":c).trim()})});
+            previewRows(rows);
+          }catch(e){
+            $("#impMsg").textContent="✗ อ่านไฟล์ Excel ไม่สำเร็จ: "+e.message;
+          }
+        };
+        rd.readAsArrayBuffer(f);
+      }).catch(function(){
         $("#impMsg").textContent="✗ โหลดตัวอ่าน Excel (SheetJS) ไม่สำเร็จ — เช็กการเชื่อมต่อเน็ตแล้วลองใหม่ หรือ Save As เป็น CSV UTF-8 แทน";
-        return;
-      }
-      var rd=new FileReader();
-      rd.onload=function(){
-        try{
-          var wb=XLSX.read(rd.result,{type:"array"});
-          var ws=wb.Sheets[wb.SheetNames[0]];
-          var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:""})
-            .map(function(r){return r.map(function(c){return String(c==null?"":c).trim()})});
-          previewRows(rows);
-        }catch(e){
-          $("#impMsg").textContent="✗ อ่านไฟล์ Excel ไม่สำเร็จ: "+e.message;
-        }
-      };
-      rd.readAsArrayBuffer(f);
+      });
       return;
     }
     var rd=new FileReader();
@@ -3105,11 +3431,9 @@
   }
   $("#exportXlsx").addEventListener("click",function(){
     var toast=$("#planToast");
-    if(typeof ExcelJS==="undefined"){
-      toast.textContent="✗ โหลดตัวเขียน Excel (ExcelJS) ไม่สำเร็จ — เช็กการเชื่อมต่อเน็ตแล้วลองใหม่ หรือใช้ปุ่ม “ส่งออก CSV” แทน";
-      toast.hidden=false;setTimeout(function(){toast.hidden=true},4500);
-      return;
-    }
+    toast.textContent="กำลังโหลดตัวเขียน Excel...";
+    toast.hidden=false;
+    loadScriptOnce("vendor/exceljs/exceljs.min.js").then(function(){
     var wb=new ExcelJS.Workbook();
     wb.creator="GoPandaCN";
     var ws=wb.addWorksheet("แผนทริป",{views:[{state:"frozen",ySplit:2,showGridLines:false}]});
@@ -3190,6 +3514,10 @@
       URL.revokeObjectURL(url);
       toast.textContent="✓ ส่งออกแผน "+cnt+" รายการเป็นไฟล์ Excel จัดฟอร์แมตแล้ว";
       toast.hidden=false;setTimeout(function(){toast.hidden=true},4000);
+    });
+    }).catch(function(){
+      toast.textContent="✗ โหลดตัวเขียน Excel (ExcelJS) ไม่สำเร็จ — เช็กการเชื่อมต่อเน็ตแล้วลองใหม่ หรือใช้ปุ่ม “ส่งออก CSV” แทน";
+      toast.hidden=false;setTimeout(function(){toast.hidden=true},4500);
     });
   });
   $("#impConfirm").addEventListener("click",function(){
@@ -3648,13 +3976,22 @@
       $("#viewTitle").textContent=activeTrip.name;
     }
   }
+  // เติม stopId ถาวรให้จุดหมายที่ยังไม่มี (ทริปเก่าก่อนรอบอัปเดตนี้) — ไว้ผูกไฟล์แนบใน IndexedDB
+  // ให้ไม่หลุดตามเมื่อย้ายวัน/สลับลำดับ (ต่างจาก index ที่เปลี่ยนได้)
+  function ensureStopIds(arr){
+    (arr||[]).forEach(function(s){if(!s[5])s[5]=uid("s_")});
+    return arr;
+  }
   function switchToLiveData(days2,backlog2,journal2,checklist2){
     days=days2;backlog=backlog2;curDay=1;
+    Object.keys(days).forEach(function(n){ensureStopIds(days[n].s)});
+    ensureStopIds(backlog);
     journalState=journal2||{spent:0,entries:[]};
     checklist=checklist2||defaultChecklist();
     applyCalendar(activeTrip);
     renderBoard();renderDay(curDay);renderTripCardMeta();updateReady();
     renderChecklist();renderJournalSummary();renderJournalEntries();
+    if(typeof renderTripDocs==="function")renderTripDocs();
   }
   function switchTrip(id){
     if(id===activeTrip.id)return;
@@ -3770,6 +4107,8 @@
     return pool[0].t;
   }
   (function initTrips(){
+    Object.keys(days).forEach(function(n){ensureStopIds(days[n].s)});
+    ensureStopIds(backlog);
     var list=loadTripsList();
     if(!list.length){
       // ครั้งแรกที่เปิดแอป — เซฟข้อมูลดีโมที่ hardcode ไว้เป็นทริป "default" ทริปแรกในรายการ
