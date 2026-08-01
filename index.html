@@ -963,6 +963,7 @@
             <button id="mapLocate" aria-label="ไปตำแหน่งปัจจุบันของฉัน">◎</button>
             <button id="mapFullscreen" aria-label="ขยายแผนที่เต็มจอ">⛶</button>
             <button id="mapTheme" aria-label="เปลี่ยนสีถนนบนแผนที่" title="เปลี่ยนสีถนน">🎨</button>
+            <button id="mapDownloadTiles" aria-label="ดาวน์โหลดแผนที่ออฟไลน์สำหรับทริปนี้" title="ดาวน์โหลดแผนที่ออฟไลน์สำหรับทริปนี้">⬇️</button>
           </div>
 
           <div class="pin-pop" id="pinPop" role="dialog" aria-label="รายละเอียดสถานที่">
@@ -2083,12 +2084,102 @@
     if(saved)applyRoadTheme(saved);
   });
 
+  /* ---- โหลด/สลับ tile ของเมืองที่กำลังดูอยู่แบบไดนามิก (feature: แยก pmtiles รายเมือง)
+     เดิม map-style.json มี source+layer ของฉางซาฝังตายตัวไว้เลย ทำให้ต้อง precache รวมทุกเมือง
+     เข้า SW shell แบบ atomic (พังง่าย + โหลดของที่ทริปนี้ไม่ได้ใช้) ตอนนี้ style มีแค่พื้นหลัง
+     ประเทศ/มณฑลคงที่ ส่วน source+layer ของถนน/น้ำ/อาคาร/ป้ายชื่อ ใส่/ถอดตรงนี้เองตอนสลับเมือง
+     ดู ARCHITECTURE-ROADMAP.md § 3.2 ---- */
+  var CITY_TILE_KEY={"ฉางซา":"changsha","จางเจียเจี้ย":"zhangjiajie","เฟิ่งหวง":"fenghuang",
+    "ฝูหรง":"furong","ฉงลี่":"chongli","ปักกิ่ง":"beijing","เทียนจิน":"tianjin"};
+  var CITY_TILE_LAYER_IDS=["water","water-line","landuse-park","buildings","roads-casing","roads-line","roads-label"];
+  var currentTileCity=null;
+  function addCityTileLayers(){
+    gpMap.addSource("citytiles",{type:"vector",url:"pmtiles://tiles/"+currentTileCity+".pmtiles",
+      minzoom:11,maxzoom:16,attribution:"© OpenStreetMap contributors"});
+    gpMap.addLayer({id:"water",type:"fill",source:"citytiles","source-layer":"water",
+      paint:{"fill-color":"#0d2438","fill-outline-color":"#164e63"}});
+    gpMap.addLayer({id:"water-line",type:"line",source:"citytiles","source-layer":"water",
+      paint:{"line-color":"#164e63","line-width":["interpolate",["linear"],["zoom"],11,0.8,16,3]}});
+    gpMap.addLayer({id:"landuse-park",type:"fill",source:"citytiles","source-layer":"landuse",
+      paint:{"fill-color":"#10261e","fill-opacity":0.9}});
+    gpMap.addLayer({id:"buildings",type:"fill",source:"citytiles","source-layer":"buildings",minzoom:14,
+      paint:{"fill-color":"#2c4064","fill-outline-color":"#5870aa",
+        "fill-opacity":["interpolate",["linear"],["zoom"],14,0.65,16,0.95]}});
+    gpMap.addLayer({id:"roads-casing",type:"line",source:"citytiles","source-layer":"roads",paint:{
+      "line-color":["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#3d5c8c",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#2e4568","#243450"],
+      "line-width":["interpolate",["linear"],["zoom"],
+        11,["match",["get","class"],["motorway","trunk","primary"],2,1],
+        16,["match",["get","class"],["motorway","trunk","primary"],10,["secondary","tertiary"],7,4]]}});
+    gpMap.addLayer({id:"roads-line",type:"line",source:"citytiles","source-layer":"roads",paint:{
+      "line-color":["match",["get","class"],
+        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#a9c4ee",
+        ["secondary","secondary_link","tertiary","tertiary_link"],"#7896c2","#4a6285"],
+      "line-width":["interpolate",["linear"],["zoom"],
+        11,["match",["get","class"],["motorway","trunk","primary"],0.8,0.4],
+        16,["match",["get","class"],["motorway","trunk","primary"],5,["secondary","tertiary"],3,1.5]]}});
+    gpMap.addLayer({id:"roads-label",type:"symbol",source:"citytiles","source-layer":"roads",minzoom:14,
+      filter:["has","name"],
+      layout:{"symbol-placement":"line","text-field":["get","name"],"text-font":["Noto Sans SC"],
+        "text-size":["interpolate",["linear"],["zoom"],14,10,18,13]},
+      paint:{"text-color":"#e2e8f0","text-halo-color":"#0a1324","text-halo-width":1.2}});
+  }
+  function loadCityTiles(cityTh){
+    var key=CITY_TILE_KEY[cityTh]||null;
+    if(key===currentTileCity)return;
+    function apply(){
+      CITY_TILE_LAYER_IDS.forEach(function(id){if(gpMap.getLayer(id))gpMap.removeLayer(id)});
+      if(gpMap.getSource("citytiles"))gpMap.removeSource("citytiles");
+      currentTileCity=key;
+      if(key)addCityTileLayers();
+    }
+    if(gpMap.isStyleLoaded())apply();else gpMap.once("load",apply);
+  }
+
+  /* ---- ดาวน์โหลดแผนที่ออฟไลน์ของทริปนี้ล่วงหน้า (feature: แทนที่การ precache รวมทุกเมืองแบบเดิม
+     ที่ทำให้ทุกคนโหลดของทุกเมืองแม้ทริปนั้นไม่ได้ไป) — เก็บใน cache แยกจาก SHELL_CACHE
+     (gopanda-tiles-v1 เดียวกับที่ sw.js ใช้ serve) เพื่อไม่ให้การ bump SHELL_CACHE รอบต่อๆ ไป
+     ทำให้ต้องโหลด tile ซ้ำทุกครั้ง — ยังไม่มี progress bar สวยๆ (ดูข้อ 3.4 ใน ARCHITECTURE-ROADMAP.md) ---- */
+  var TILE_CACHE_NAME="gopanda-tiles-v1";
+  function downloadTripTiles(){
+    var btn=$("#mapDownloadTiles");
+    var cities=(activeTrip.cities||[]).map(function(c){return CITY_TILE_KEY[c]}).filter(Boolean);
+    cities=cities.filter(function(k,i){return cities.indexOf(k)===i}); // dedupe
+    if(!cities.length){
+      btn.textContent="∅";setTimeout(function(){btn.textContent="⬇️"},1500);
+      return;
+    }
+    btn.disabled=true;
+    caches.open(TILE_CACHE_NAME).then(function(cache){
+      var done=0,failed=0;
+      function next(){
+        if(done+failed>=cities.length){
+          btn.textContent=failed?"⚠️":"✓";btn.disabled=false;
+          setTimeout(function(){btn.textContent="⬇️"},2500);
+          return;
+        }
+        var url="tiles/"+cities[done+failed]+".pmtiles";
+        cache.match(url).then(function(hit){
+          return hit?Promise.resolve():cache.add(url);
+        }).then(function(){
+          done++;btn.textContent="⬇️ "+(done+failed)+"/"+cities.length;next();
+        }).catch(function(){
+          failed++;btn.textContent="⬇️ "+(done+failed)+"/"+cities.length;next(); // ข้ามไฟล์ที่โหลดพลาด (เช่นไม่มีเน็ต) ไม่ให้ค้าง
+        });
+      }
+      next();
+    });
+  }
+  $("#mapDownloadTiles").addEventListener("click",downloadTripTiles);
+
   /* ---- ชิปเมือง (feature: กรองเมืองตามทริปที่เปิดอยู่ ไม่ปนข้ามทริป) ----
      renderCityChips ถูกเรียกจริงจาก renderTripCardMeta() (ทำงานหลัง activeTrip
      พร้อมค่าเสมอ ไม่ใช่ตรงนี้) เพราะ activeTrip ยังไม่ถูก assign ค่าตอนบรรทัดนี้รันจริง (ประกาศอยู่ถัดไปในไฟล์) */
   function flyToCity(name){
     var msg=$("#cityMsg");
     var city=cityCenters[name];
+    loadCityTiles(name);
     if(city){
       msg.hidden=true;
       gpMap.flyTo({center:[city.lng,city.lat],zoom:city.zoom});

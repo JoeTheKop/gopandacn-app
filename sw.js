@@ -3,8 +3,15 @@
    ตามแนวเดียวกับ poc/app/sw.js — same-origin cache-first เท่านั้น (SheetJS/ExcelJS เคย
    โหลดจาก CDN ต่างประเทศตรงๆ ซึ่งบล็อก/ช้ามากในจีน — vendor เข้ามาเองแล้ว โหลดแบบ lazy
    เฉพาะตอนใช้ฟีเจอร์ Excel เท่านั้น ดู loadScriptOnce() ใน gopandacn-prototype.html)
-*/
-const SHELL_CACHE = "gopandacn-shell-v48";
+
+   TILE_CACHE/RUNTIME_CACHE แยกออกจาก SHELL_CACHE โดยตั้งใจ (ไม่มีเลข v ต่อท้ายที่ bump
+   พร้อม SHELL_CACHE) — เดิม pmtiles/โมเดล Vosk/SheetJS/ExcelJS ถูก cache ปนอยู่ใน SHELL_CACHE
+   เดียวกับ shell ทำให้ทุกครั้งที่ bump SHELL_CACHE (แทบทุก commit) ของหนักพวกนี้โดนลบทิ้งไปด้วย
+   ต้องโหลดใหม่ทั้งหมด ทั้งที่เนื้อหาไม่ได้เปลี่ยน — แยกออกมาแล้วของพวกนี้อยู่ถาวรข้าม shell version
+   ดู ARCHITECTURE-ROADMAP.md § 3.2 */
+const SHELL_CACHE = "gopandacn-shell-v51";
+const TILE_CACHE = "gopanda-tiles-v1";
+const RUNTIME_CACHE = "gopanda-runtime-v1";
 const SHELL = [
   "./", "./index.html",
   "./manifest.webmanifest",
@@ -14,7 +21,9 @@ const SHELL = [
   "./map-data/world-outline.geojson", "./map-data/china-provinces.geojson",
   "./vendor/maplibre/maplibre-gl.js", "./vendor/maplibre/maplibre-gl.css",
   "./vendor/pmtiles/pmtiles.js",
-  "./tiles/changsha.pmtiles",
+  // pmtiles ต่อเมืองไม่อยู่ในนี้อีกแล้ว (เดิมมีแค่ changsha.pmtiles ไฟล์รวมทุกเมือง precache
+  // แบบ atomic — พังง่ายเพราะเป็นไฟล์เดียวยักษ์ + โหลดของเมืองที่ทริปนั้นไม่ได้ไปด้วยเปล่าๆ)
+  // ตอนนี้โหลดทีละเมืองผ่านปุ่ม "ดาวน์โหลดแผนที่ทริปนี้" เข้า TILE_CACHE แยกต่างหากแทน
   "./audio/phrases/sos-0.mp3", "./audio/phrases/sos-1.mp3", "./audio/phrases/sos-2.mp3",
   "./audio/phrases/sos-3.mp3", "./audio/phrases/sos-4.mp3", "./audio/phrases/sos-5.mp3",
   "./audio/phrases/food-0.mp3", "./audio/phrases/food-1.mp3", "./audio/phrases/food-2.mp3",
@@ -121,9 +130,10 @@ self.addEventListener("install", (e) => {
 });
 
 self.addEventListener("activate", (e) => {
+  const keep = new Set([SHELL_CACHE, TILE_CACHE, RUNTIME_CACHE]);
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== SHELL_CACHE).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });
@@ -133,9 +143,9 @@ self.addEventListener("activate", (e) => {
 // เคยเจอปัญหาคล้ายกันมาแล้วฝั่ง POC เลยย้ายไปใช้ OPFS (ดู poc/app/sw.js) — แต่เรือธงยังไม่มีระบบนั้น
 // จึง cache ไฟล์เต็มไว้เฉยๆ แล้ว slice ตาม Range header เองแทน ไม่พึ่งพฤติกรรม browser ที่ไม่นิ่ง
 async function servePmtilesRange(request) {
-  const cache = await caches.open(SHELL_CACHE);
+  const cache = await caches.open(TILE_CACHE);
   const full = await cache.match(request, { ignoreSearch: true });
-  if (!full) return fetch(request); // ยังไม่เคย cache (เช่นระหว่าง install) — ปล่อยผ่านเน็ตตรงๆ
+  if (!full) return fetch(request); // เมืองนี้ยังไม่เคยกดดาวน์โหลด — ปล่อยผ่านเน็ตตรงๆ (ต้องมีสัญญาณ)
   const rangeHeader = request.headers.get("range");
   if (!rangeHeader) return full;
   const buf = await full.clone().arrayBuffer();
@@ -161,7 +171,7 @@ async function servePmtilesRange(request) {
 // ด้วย runtime caching: cache-first ปกติ ถ้า miss ก็ fetch จริงแล้วเก็บผลลง cache ก่อนคืนค่า
 // ต่างจาก path อื่นด้านล่างที่แค่ fallback ไป fetch เฉยๆ ไม่เก็บ (เพราะ path อื่นถูก precache ไว้แล้วตั้งแต่ install)
 async function serveCacheThenNetwork(request) {
-  const cache = await caches.open(SHELL_CACHE);
+  const cache = await caches.open(RUNTIME_CACHE);
   const hit = await cache.match(request, { ignoreSearch: true });
   if (hit) return hit;
   const resp = await fetch(request);
