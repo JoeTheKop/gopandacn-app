@@ -9,7 +9,7 @@
    เดียวกับ shell ทำให้ทุกครั้งที่ bump SHELL_CACHE (แทบทุก commit) ของหนักพวกนี้โดนลบทิ้งไปด้วย
    ต้องโหลดใหม่ทั้งหมด ทั้งที่เนื้อหาไม่ได้เปลี่ยน — แยกออกมาแล้วของพวกนี้อยู่ถาวรข้าม shell version
    ดู ARCHITECTURE-ROADMAP.md § 3.2 */
-const SHELL_CACHE = "gopandacn-shell-v54";
+const SHELL_CACHE = "gopandacn-shell-v56";
 const TILE_CACHE = "gopanda-tiles-v1";
 const RUNTIME_CACHE = "gopanda-runtime-v1";
 const SHELL = [

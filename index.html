@@ -283,6 +283,9 @@
     border:1px solid var(--border);border-radius:14px;background:var(--panel);
     padding:13px 15px;display:flex;gap:12px;align-items:flex-start;
   }
+  /* คลิกแก้ไขได้เฉพาะการ์ดในโต๊ะวางแผน (ci-based, ดู stopCardHTML) — แผนเที่ยวรายวันยังเป็น .stop-card เฉยๆ ไม่มี hover/cursor */
+  .stop-card-editable{cursor:pointer;transition:border-color .2s,transform .2s}
+  .stop-card-editable:hover{border-color:rgba(245,158,11,.4);transform:translateX(3px)}
   .doc-attach{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
   .doc-attach-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
   .doc-attach-head .label{font-size:.8rem;font-weight:700}
@@ -1234,7 +1237,27 @@
         <div class="doc-list" id="tripDocList"></div>
         <div class="sub2" style="margin:4px 2px 0">รองรับรูปภาพ/PDF สูงสุด 5MB ต่อไฟล์ — แนบได้หลายไฟล์ · เก็บไว้ในเครื่องนี้เท่านั้น</div>
 
-        <div class="board" id="board" aria-label="บอร์ดวางแผนรายวัน"></div>
+        <div class="itin-head" style="margin:14px 2px 0">
+          <h3>🗓️ แผนเที่ยวรายวัน · <em>แก้ไขได้ที่นี่</em></h3>
+          <span class="aff-note">แตะการ์ดเพื่อแก้ไข</span>
+        </div>
+        <div class="day-strip" id="planDayStrip"></div>
+        <div class="itin-head">
+          <h3 id="planItinTitle">วัน 1 · <em>…</em></h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="sub num" id="planItinMeta"></span>
+            <button class="btn-ghost" id="planOptimizeBtn" title="เรียงเส้นทางอัจฉริยะ" style="padding:5px 10px;font-size:.7rem">✨</button>
+          </div>
+        </div>
+        <div class="timeline" id="planTimeline"></div>
+        <button class="add-stop" id="planAddStopBtn">＋ เพิ่มจุดหมายในวันนี้</button>
+
+        <div class="itin-head" style="margin-top:20px">
+          <h3>💡 ไอเดียที่ยังไม่จัดวัน</h3>
+          <span class="sub num" id="backlogMeta"></span>
+        </div>
+        <div class="timeline" id="backlogTimeline"></div>
+        <button class="add-stop" id="planAddIdeaBtn">＋ เพิ่มไอเดียใหม่</button>
       </section>
 
     </div>
@@ -1568,6 +1591,9 @@
       <div class="sub2">แก้แผนวันนี้ได้เลย — บันทึกไว้ในเครื่องนี้ทันที</div>
       <div class="modal-card">
         <div class="trip-form-row">
+          <label>วัน
+            <select id="stopDay" class="tf-text"></select>
+          </label>
           <label>เวลา
             <input type="time" id="stopTime" class="tf-text">
           </label>
@@ -1832,7 +1858,7 @@
     phrases:["วลีจีนฉุกเฉิน","แตะการ์ดเพื่อขยายตัวอักษรใหญ่ให้คนจีนอ่าน"],
     ready:["ความพร้อมก่อนบิน","บิน 12 ก.ย. 03:00 (CZ3036) · แตะรายการเพื่อติ๊กว่าเสร็จแล้ว"],
     sos:["SOS & บัตรสุขภาพ","ทุกอย่างในหน้านี้ใช้ได้แบบออฟไลน์ · แตะการ์ดเพื่อขยายโชว์"],
-    plan:["โต๊ะวางแผนทริป","โหมดวางแผนสำหรับจอใหญ่ · ย้ายการ์ดข้ามวัน + นำเข้าไฟล์ Excel/CSV"]
+    plan:["โต๊ะวางแผน-แก้ไขทริป","โหมดวางแผนสำหรับจอใหญ่ · ย้ายการ์ดข้ามวัน + นำเข้าไฟล์ Excel/CSV"]
   };
   function showView(v){
     $$(".nav-btn").forEach(function(b){b.classList.toggle("active",b.dataset.view===v)});
@@ -2382,44 +2408,92 @@
     ]}
   };
   var curDay=1;
-  function renderDay(n){
-    curDay=n;
-    var d=days[n];
-    var tl=$("#timeline");
+  /* ---- การ์ดจุดหมาย 1 ใบ — ใช้ร่วมกันทั้งแผนเที่ยวรายวัน (ดูอย่างเดียว) และโต๊ะวางแผน (แก้ไขได้)
+     ต่างกันแค่ editable: true จะมี data-idx/role=button/class พิเศษให้คลิกเปิดแก้ไขได้ ---- */
+  function stopCardHTML(s,idx,editable){
+    return '<div class="stop"><div class="stop-card'+(editable?' stop-card-editable':'')+'"'+
+      (editable?' data-idx="'+idx+'" role="button" tabindex="0" aria-label="แก้ไขจุดหมายนี้"':'')+'>'+
+      '<div class="stop-time num">'+esc(s[0])+'</div>'+
+      '<div class="stop-body"><h4>'+esc(s[1])+'</h4><p>'+esc(s[2])+'</p>'+
+      '<span class="tag '+s[3][0]+'">'+esc(s[3][1])+'</span>'+
+      (s[4]?'<span class="tag cost num">¥'+s[4]+'</span>':'')+'</div></div></div>';
+  }
+  function renderDayInto(tlSel,titleSel,metaSel,n,d,editable){
+    var tl=$(tlSel);
+    if(!tl)return;
     if(!d||!d.s||!d.s.length){
-      $("#itinTitle").innerHTML="วัน "+n+" · <em>ยังไม่ได้วางแผน</em>";
-      $("#itinMeta").textContent="แตะ “เพิ่มจุดหมาย” เพื่อเริ่มวางแผน";
+      $(titleSel).innerHTML="วัน "+n+" · <em>ยังไม่ได้วางแผน</em>";
+      $(metaSel).textContent=editable?"กด “+ เพิ่มจุดหมายในวันนี้” ด้านล่างเพื่อเริ่มวางแผน":"แตะ “เพิ่มจุดหมาย” เพื่อเริ่มวางแผน";
       tl.innerHTML='<div class="stop"><div class="stop-card"><div class="stop-body"><h4>วันนี้ยังว่างอยู่ 🐼</h4><p>ลองถามหลิงหลิงว่า “วัน '+n+' ที่จางเจียเจี้ยควรไปไหนดี” แล้วกดเพิ่มเข้าแผนได้เลย</p></div></div></div>';
       return;
     }
-    $("#itinTitle").innerHTML="วัน "+n+" · <em>"+d.t+"</em>";
-    $("#itinMeta").textContent=d.m;
-    tl.innerHTML=d.s.map(function(s,idx){
-      return '<div class="stop"><div class="stop-card">'+
-        '<div class="stop-time num">'+esc(s[0])+'</div>'+
-        '<div class="stop-body"><h4>'+esc(s[1])+'</h4><p>'+esc(s[2])+'</p>'+
-        '<span class="tag '+s[3][0]+'">'+esc(s[3][1])+'</span>'+
-        (s[4]?'<span class="tag cost num">¥'+s[4]+'</span>':'')+'</div></div></div>';
-    }).join("");
+    $(titleSel).innerHTML="วัน "+n+" · <em>"+d.t+"</em>";
+    $(metaSel).textContent=d.m;
+    tl.innerHTML=d.s.map(function(s,idx){return stopCardHTML(s,idx,editable)}).join("");
+  }
+  function renderDay(n){
+    curDay=n;
+    var d=days[n];
+    renderDayInto("#timeline","#itinTitle","#itinMeta",n,d,false);
+    renderDayInto("#planTimeline","#planItinTitle","#planItinMeta",n,d,true);
   }
   renderDay(1);
+  function renderBacklogTimeline(){
+    var tl=$("#backlogTimeline");
+    if(!tl)return;
+    $("#backlogMeta").textContent=backlog.length+" ใบ";
+    tl.innerHTML=backlog.length?backlog.map(function(s,idx){return stopCardHTML(s,idx,true)}).join("")
+      :'<div class="stop"><div class="stop-card"><div class="stop-body"><h4>ยังไม่มีไอเดียเก็บไว้</h4><p>กด “+ เพิ่มไอเดียใหม่” ด้านล่าง — ใส่ไว้ก่อน ค่อยลากไปจัดวันทีหลังได้</p></div></div></div>';
+  }
   function renderDayStrip(){
     var html="";
     for(var n=1;n<=activeTrip.dayCount;n++)
       html+='<button class="day-chip'+(n===curDay?' active':'')+'" data-day="'+n+'"><b>วัน '+n+'</b>'+(dayDates[n]||"")+'</button>';
-    var strip=$("#dayStrip");
-    strip.innerHTML=html;
-    // ทริปยาว (แถบเลื่อนได้ ~3 จอ) — เลื่อนให้ชิปวันที่เลือกอยู่ใน view เสมอหลัง re-render
-    // ไม่งั้นสลับระหว่างทริปยาวสองทริป scrollLeft ค้างที่เดิมแต่ active กลับไปวัน 1 นอกจอ
-    var act=strip.querySelector(".day-chip.active");
-    if(act)act.scrollIntoView({inline:"center",block:"nearest"});
+    [$("#dayStrip"),$("#planDayStrip")].forEach(function(strip){
+      if(!strip)return;
+      strip.innerHTML=html;
+      // ทริปยาว (แถบเลื่อนได้ ~3 จอ) — เลื่อนให้ชิปวันที่เลือกอยู่ใน view เสมอหลัง re-render
+      // ไม่งั้นสลับระหว่างทริปยาวสองทริป scrollLeft ค้างที่เดิมแต่ active กลับไปวัน 1 นอกจอ
+      var act=strip.querySelector(".day-chip.active");
+      if(act)act.scrollIntoView({inline:"center",block:"nearest"});
+    });
+  }
+  function goToDay(n){
+    [$("#dayStrip"),$("#planDayStrip")].forEach(function(strip){
+      if(!strip)return;
+      $$(".day-chip",strip).forEach(function(x){x.classList.toggle("active",+x.dataset.day===n)});
+    });
+    renderDay(n);
   }
   $("#dayStrip").addEventListener("click",function(e){
     var c=e.target.closest(".day-chip");if(!c)return;
-    $$(".day-chip",$("#dayStrip")).forEach(function(x){x.classList.remove("active")});
-    c.classList.add("active");
-    renderDay(+c.dataset.day);
+    goToDay(+c.dataset.day);
   });
+  $("#planDayStrip").addEventListener("click",function(e){
+    var c=e.target.closest(".day-chip");if(!c)return;
+    goToDay(+c.dataset.day);
+  });
+  $("#planTimeline").addEventListener("click",function(e){
+    var c=e.target.closest(".stop-card[data-idx]");if(!c)return;
+    openStopModal(curDay,+c.dataset.idx);
+  });
+  $("#planTimeline").addEventListener("keydown",function(e){
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    var c=e.target.closest(".stop-card[data-idx]");if(!c)return;
+    e.preventDefault();openStopModal(curDay,+c.dataset.idx);
+  });
+  $("#backlogTimeline").addEventListener("click",function(e){
+    var c=e.target.closest(".stop-card[data-idx]");if(!c)return;
+    openStopModal(0,+c.dataset.idx);
+  });
+  $("#backlogTimeline").addEventListener("keydown",function(e){
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    var c=e.target.closest(".stop-card[data-idx]");if(!c)return;
+    e.preventDefault();openStopModal(0,+c.dataset.idx);
+  });
+  $("#planAddStopBtn").addEventListener("click",function(){openStopModal(curDay,null)});
+  $("#planAddIdeaBtn").addEventListener("click",function(){openStopModal(0,null)});
+  $("#planOptimizeBtn").addEventListener("click",function(){optimizeDay(curDay)});
 
   /* ---- เพิ่ม/แก้ไข/ลบจุดหมาย — แก้ไขได้เฉพาะจากโต๊ะวางแผน (บอร์ด) เท่านั้น
      แผนเที่ยวรายวันเป็นหน้าดูอย่างเดียว (read-only) ตามที่ป๋าโจต้องการ ---- */
@@ -2429,6 +2503,10 @@
     var s=(idx!=null)?arr[idx]:null;
     stopEditCtx={ci:ci,idx:idx,pendingStopId:s?s[5]:uid("s_")};
     $("#stopModalTitle").textContent=s?"✏️ แก้ไขจุดหมาย":"➕ เพิ่มจุดหมาย";
+    var dayOpts='<option value="0">💡 ไอเดีย (ยังไม่จัดวัน)</option>';
+    for(var dn=1;dn<=activeTrip.dayCount;dn++)dayOpts+='<option value="'+dn+'">วัน '+dn+(dayDates[dn]?" ("+dayDates[dn]+")":"")+'</option>';
+    $("#stopDay").innerHTML=dayOpts;
+    $("#stopDay").value=ci;
     $("#stopTime").value=(s&&s[0]!=="--")?s[0]:"";
     $("#stopPlace").value=s?s[1]:"";
     $("#stopDesc").value=s?s[2]:"";
@@ -2456,13 +2534,16 @@
     if(!place){$("#stopPlace").focus();return}
     var catLabel=$("#stopCat").value;
     var budget=$("#stopBudget").value?Number($("#stopBudget").value):null;
+    var newCi=+$("#stopDay").value;
     var entry=[$("#stopTime").value||"--",place,$("#stopDesc").value.trim(),catMap[catLabel]||["spot","ที่เที่ยว"],budget,stopEditCtx.pendingStopId];
-    var arr=colArr(stopEditCtx.ci);
-    if(stopEditCtx.idx!=null)arr[stopEditCtx.idx]=entry;else arr.push(entry);
-    if(stopEditCtx.ci>0)sortDay(stopEditCtx.ci);
+    // เอาออกจากที่เดิมก่อนเสมอ (ถ้ามีอยู่แล้ว) แล้วค่อยใส่ที่ใหม่ — วิธีเดียวกันไม่ว่าจะแค่แก้ข้อมูลเดิม
+    // หรือย้ายวัน (เปลี่ยนวันแล้วก็แค่ "เอาออกจากที่เดิม ใส่ที่ใหม่ เรียงลำดับใหม่" เหมือนแก้เวลาทุกประการ)
+    if(stopEditCtx.idx!=null)colArr(stopEditCtx.ci).splice(stopEditCtx.idx,1);
+    colArr(newCi).push(entry);
+    if(newCi>0)sortDay(newCi);
     stopEditCtx.saved=true;
     persistCurrentTrip();
-    renderBoard();renderDay(curDay);renderDayStrip();
+    renderBoard();renderDay(curDay);renderDayStrip();renderBacklogTimeline();
     closeStopModal();
   });
   $("#stopDeleteBtn").addEventListener("click",function(){
@@ -2473,7 +2554,7 @@
     });
     stopEditCtx.saved=true; // จุดหมายถูกลบแล้ว ไม่ต้องให้ closeStopModal() เคลียร์ไฟล์ซ้ำ
     persistCurrentTrip();
-    renderBoard();renderDay(curDay);renderDayStrip();
+    renderBoard();renderDay(curDay);renderDayStrip();renderBacklogTimeline();
     closeStopModal();
   });
 
@@ -3333,88 +3414,22 @@
   function getDay(n){if(!days[n])days[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};return days[n]}
   function colArr(ci){return ci===0?backlog:getDay(ci).s}
   function colCost(ci){return colArr(ci).reduce(function(a,s){return a+(+s[4]||0)},0)}
-  function colCards(ci){
-    var arr=colArr(ci);
-    return arr.map(function(s,i){
-      return '<div class="bcard" draggable="true" data-ci="'+ci+'" data-i="'+i+'">'+
-        (s[0]!=="--"&&s[0]?'<span class="btime num">'+s[0]+'</span>':'')+
-        '<div class="bt">'+s[1]+'</div>'+
-        '<div class="brow"><span class="tag '+s[3][0]+'">'+s[3][1]+'</span>'+
-        (s[4]?'<span class="bcost2 num">¥'+s[4]+'</span>':'')+
-        bookBtn(s)+
-        '<span class="bmove">'+
-        (ci>0?'<button data-mv="-1" data-ci="'+ci+'" data-i="'+i+'" aria-label="ย้ายไปคอลัมน์ก่อนหน้า">◀</button>':'')+
-        (ci<activeTrip.dayCount?'<button data-mv="1" data-ci="'+ci+'" data-i="'+i+'" aria-label="ย้ายไปวันถัดไป">▶</button>':'')+
-        '</span></div></div>';
-    }).join("")+'<button class="badd" data-add="'+ci+'">＋ เพิ่มการ์ด</button>';
-  }
+  // เดิม renderBoard() วาด Kanban หลายคอลัมน์เข้า #board (การ์ดยัดข้อมูลแน่นจนกดแก้ไขไม่รู้ว่ากดตรงไหน
+  // ป๋าโจ feedback ตรงๆ ว่า UX แย่) เปลี่ยนมาใช้ layout เดียวกับแผนเที่ยวรายวัน (day-tab + timeline
+  // แนวตั้ง) แทนแล้ว ดู renderDay()/renderBacklogTimeline() — ฟังก์ชันนี้เหลือแค่คำนวณงบรวมแสดงผล
   function renderBoard(){
-    var html='<div class="bcol backlog" data-col="0"><div class="bcol-head"><b>💡 ไอเดีย</b><span>ยังไม่จัดวัน</span><span class="bcost num">'+backlog.length+'</span></div>'+colCards(0)+'</div>';
     var total=0;
     for(var n=1;n<=activeTrip.dayCount;n++){
       var d=getDay(n);d.m=d.s.length+" จุดหมาย";
-      var c=colCost(n);total+=c;
-      html+='<div class="bcol" data-col="'+n+'"><div class="bcol-head"><b>วัน '+n+'</b><span class="num">'+dayDates[n]+'</span>'+
-        '<span class="bcost num">'+d.s.length+' จุด'+(c?' · ¥'+c.toLocaleString():'')+'</span>'+
-        '<button class="bopt" data-opt="'+n+'" title="เรียงเส้นทางอัจฉริยะ" aria-label="เรียงเส้นทางวัน '+n+'">✨</button></div>'+colCards(n)+'</div>';
+      total+=colCost(n);
     }
-    $("#board").innerHTML=html;
     var bd=$("#planBudget");
     bd.className="budget-chip num"+(total>activeTrip.budget?" over":"");
     bd.innerHTML=(total>activeTrip.budget?"⚠️ ":"")+"แผนใช้จ่ายรวม ≈ <b>¥"+total.toLocaleString()+"</b> / งบทริป ¥"+activeTrip.budget.toLocaleString();
   }
   function sortDay(n){getDay(n).s.sort(function(a,b){return (a[0]==="--"?"99":a[0]).localeCompare(b[0]==="--"?"99":b[0])})}
-  function moveItem(ci,i,to){
-    if(ci===to){renderBoard();return}
-    var item=colArr(ci).splice(i,1)[0];
-    colArr(to).push(item);
-    if(to>0)sortDay(to);
-    renderBoard();renderDay(curDay);
-  }
-  $("#board").addEventListener("click",function(e){
-    var op=e.target.closest("[data-opt]");
-    if(op){optimizeDay(+op.dataset.opt);return}
-    var mv=e.target.closest("[data-mv]");
-    if(mv){moveItem(+mv.dataset.ci,+mv.dataset.i,+mv.dataset.ci+(+mv.dataset.mv));return}
-    var ad=e.target.closest("[data-add]");
-    if(ad){
-      colArr(+ad.dataset.add).push(["--","📍 จุดหมายใหม่","แตะเพื่อแก้ไขได้ในแอปจริง",["spot","ที่เที่ยว"],null,uid("s_")]);
-      renderBoard();renderDay(curDay);
-      return;
-    }
-    if(e.target.closest("a"))return; // ลิงก์จอง — ให้เปิดแท็บใหม่ตามปกติ ไม่ต้องเปิด modal
-    var bc=e.target.closest(".bcard");
-    if(bc)openStopModal(+bc.dataset.ci,+bc.dataset.i);
-  });
-  /* drag & drop */
-  var dragSrc=null;
-  $("#board").addEventListener("dragstart",function(e){
-    var c=e.target.closest(".bcard");if(!c)return;
-    dragSrc={ci:+c.dataset.ci,i:+c.dataset.i};
-    c.classList.add("dragging");
-    if(e.dataTransfer){e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain","move")}
-  });
-  $("#board").addEventListener("dragend",function(){
-    dragSrc=null;
-    $$(".bcard.dragging").forEach(function(x){x.classList.remove("dragging")});
-    $$(".bcol.drop").forEach(function(x){x.classList.remove("drop")});
-  });
-  $("#board").addEventListener("dragover",function(e){
-    var col=e.target.closest(".bcol");if(!col||!dragSrc)return;
-    e.preventDefault();
-    if(e.dataTransfer)e.dataTransfer.dropEffect="move";
-    if(!col.classList.contains("drop")){
-      $$(".bcol.drop").forEach(function(x){x.classList.remove("drop")});
-      col.classList.add("drop");
-    }
-  });
-  $("#board").addEventListener("drop",function(e){
-    var col=e.target.closest(".bcol");if(!col||!dragSrc)return;
-    e.preventDefault();
-    moveItem(dragSrc.ci,dragSrc.i,+col.dataset.col);
-    dragSrc=null;
-  });
   renderBoard();
+  renderBacklogTimeline();
 
   /* ---- เอกสารแนบระดับทริปทั้งก้อน (ตั๋วเครื่องบิน พาสปอร์ต ฯลฯ — ไม่ผูกกับจุดหมายไหนโดยเฉพาะ) ---- */
   function renderTripDocs(){
@@ -4144,7 +4159,8 @@
     journalState=journal2||{spent:0,entries:[]};
     checklist=checklist2||defaultChecklist();
     applyCalendar(activeTrip);
-    renderBoard();renderDay(curDay);renderTripCardMeta();updateReady();
+    renderBoard();renderDay(curDay);renderDayStrip();renderTripCardMeta();updateReady();
+    if(typeof renderBacklogTimeline==="function")renderBacklogTimeline();
     renderChecklist();renderJournalSummary();renderJournalEntries();
     if(typeof renderTripDocs==="function")renderTripDocs();
     if(typeof refreshMapDownloadBtn==="function")refreshMapDownloadBtn();
