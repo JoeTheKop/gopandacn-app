@@ -1659,7 +1659,17 @@
     yuelu:{ic:"⛰️",title:"เขาเยว่ลู่ (岳麓山)",desc:"จุดชมวิวเมืองฉางซา + วิทยาลัยเยว่ลู่พันปี · กระเช้าขึ้น ¥30 · ใช้เวลาครึ่งวัน แนะนำไปเช้า",lng:112.9316,lat:28.1855,city:"ฉางซา"},
     wanlong:{ic:"⛷️",title:"หวันหลง สกีรีสอร์ต (万龙滑雪场)",desc:"หนึ่งในสกีรีสอร์ตแรกๆ ของฉงลี่ · พิกัดยืนยันจาก OpenStreetMap",lng:115.3930784,lat:40.9613283,city:"ฉงลี่"},
     thaiwoo:{ic:"⛷️",title:"ไท่อู่ สกีรีสอร์ต (太舞滑雪场)",desc:"太舞滑雪小镇 (Thaiwoo) · พิกัดยืนยันจาก OpenStreetMap",lng:115.4366885,lat:40.8833809,city:"ฉงลี่"},
-    yunding:{ic:"⛷️",title:"มี่หย่วน หยุนติ่ง (密苑云顶乐园)",desc:"หรือชื่อ Genting Secret Garden / Yunding Ski Park · พิกัดยืนยันจาก OpenStreetMap",lng:115.4185984,lat:40.9483320,city:"ฉงลี่"}
+    yunding:{ic:"⛷️",title:"มี่หย่วน หยุนติ่ง (密苑云顶乐园)",desc:"หรือชื่อ Genting Secret Garden / Yunding Ski Park · พิกัดยืนยันจาก OpenStreetMap",lng:115.4185984,lat:40.9483320,city:"ฉงลี่"},
+    /* ---- หมุดสถานีรถไฟหลักของแต่ละเมือง (feature: ป๋าโจขอให้ปักหมุดจริงบนแผนที่ ไม่ใช่แค่ใช้เป็นจุดกึ่งกลางเฉยๆ)
+       พิกัดเดียวกับใน cityCenters (ยืนยันจาก OpenStreetMap แล้ว) — ทำให้เมืองที่เคยไม่มีหมุดเลย
+       (จางเจียเจี้ย/เฟิ่งหวง/ฝูหรง/ปักกิ่ง/เทียนจิน) มีหมุดจริงอย่างน้อย 1 จุดด้วย ---- */
+    csxStation:{ic:"🚄",title:"สถานีฉางซาใต้ (长沙南站)",desc:"สถานีรถไฟความเร็วสูงหลักของฉางซา จุดเชื่อมต่อเข้า-ออกเมืองสำคัญ",lng:113.058967,lat:28.150084,city:"ฉางซา",type:"station"},
+    taizichengStation:{ic:"🚄",title:"สถานีไท่จื่อเฉิง (太子城站)",desc:"สถานีรถไฟความเร็วสูงใจกลางโซนสกีฉงลี่ ใกล้รีสอร์ตทั้ง 3 แห่ง",lng:115.441134,lat:40.912367,city:"ฉงลี่",type:"station"},
+    bjnStation:{ic:"🚄",title:"สถานีปักกิ่งใต้ (北京南站)",desc:"สถานีรถไฟความเร็วสูงหลักของปักกิ่ง",lng:116.372753,lat:39.863555,city:"ปักกิ่ง",type:"station"},
+    tjStation:{ic:"🚄",title:"สถานีเทียนจิน (天津站)",desc:"สถานีรถไฟหลักของเทียนจิน",lng:117.203684,lat:39.135752,city:"เทียนจิน",type:"station"},
+    zjjwStation:{ic:"🚄",title:"สถานีจางเจียเจี้ยตะวันตก (张家界西站)",desc:"สถานีรถไฟความเร็วสูงหลักของจางเจียเจี้ย ฮับเชื่อมต่อไปเฟิ่งหวง/ฝูหรง",lng:110.458002,lat:29.171368,city:"จางเจียเจี้ย",type:"station"},
+    fhStation:{ic:"🚄",title:"สถานีเฟิ่งหวงกู่เฉิง (凤凰古城站)",desc:"สถานีรถไฟความเร็วสูงหลักของเฟิ่งหวง",lng:109.59919,lat:28.020509,city:"เฟิ่งหวง",type:"station"},
+    frStation:{ic:"🚄",title:"สถานีฝูหรงเจิ้น (芙蓉镇站)",desc:"สถานีรถไฟความเร็วสูงหลักของฝูหรงเจิ้น",lng:109.982015,lat:28.773023,city:"ฝูหรง",type:"station"}
   };
   /* ---- จุดกึ่งกลาง+ซูมของแต่ละเมือง ใช้ "สถานีรถไฟหลัก" ของเมืองนั้นเป็นหมุด default (ตามที่ป๋าโจขอ)
      พิกัดยืนยันจาก OpenStreetMap (Overpass API) ทุกจุด ไม่ใช่พิกัดเดา · "ประเทศจีน" เป็นตัวเลือกพิเศษ
@@ -1754,8 +1764,12 @@
     Object.keys(pinData).forEach(function(id){
       var d=pinData[id];
       var el=document.createElement("div");
-      el.className="gp-pin"+(id==="ifs"?" selected":"");
-      el.innerHTML='<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="#f59e0b" stroke="#78350f" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>';
+      var isStation=d.type==="station";
+      el.className="gp-pin"+(isStation?" gp-pin-station":"")+(id==="ifs"?" selected":"");
+      // สถานีรถไฟใช้สีฟ้าอมเขียว (cyan) แยกจากหมุดที่เที่ยว/ร้าน (สีทอง) ให้ดูออกทันทีว่าอันไหนคือฮับเดินทาง
+      el.innerHTML=isStation
+        ?'<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="#22d3ee" stroke="#083344" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>'
+        :'<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="#f59e0b" stroke="#78350f" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>';
       el.setAttribute("role","button");el.setAttribute("tabindex","0");
       el.setAttribute("aria-label","หมุด: "+d.title);
       el.addEventListener("click",function(){selectPin(id)});
