@@ -1669,7 +1669,12 @@
     tjStation:{ic:"🚄",title:"สถานีเทียนจิน (天津站)",desc:"สถานีรถไฟหลักของเทียนจิน",lng:117.203684,lat:39.135752,city:"เทียนจิน",type:"station"},
     zjjwStation:{ic:"🚄",title:"สถานีจางเจียเจี้ยตะวันตก (张家界西站)",desc:"สถานีรถไฟความเร็วสูงหลักของจางเจียเจี้ย ฮับเชื่อมต่อไปเฟิ่งหวง/ฝูหรง",lng:110.458002,lat:29.171368,city:"จางเจียเจี้ย",type:"station"},
     fhStation:{ic:"🚄",title:"สถานีเฟิ่งหวงกู่เฉิง (凤凰古城站)",desc:"สถานีรถไฟความเร็วสูงหลักของเฟิ่งหวง",lng:109.59919,lat:28.020509,city:"เฟิ่งหวง",type:"station"},
-    frStation:{ic:"🚄",title:"สถานีฝูหรงเจิ้น (芙蓉镇站)",desc:"สถานีรถไฟความเร็วสูงหลักของฝูหรงเจิ้น",lng:109.982015,lat:28.773023,city:"ฝูหรง",type:"station"}
+    frStation:{ic:"🚄",title:"สถานีฝูหรงเจิ้น (芙蓉镇站)",desc:"สถานีรถไฟความเร็วสูงหลักของฝูหรงเจิ้น",lng:109.982015,lat:28.773023,city:"ฝูหรง",type:"station"},
+    /* ---- หมุดโรงแรม/ที่พักจากแผนทริปจริง — เช็คแล้วมีแค่ 2 จาก 6 ที่พักในทริปหูหนานที่หาเจอใน OSM
+       (ที่พักบูติกเล็กๆ/民宿 ส่วนใหญ่ยังไม่มีใครลงข้อมูลไว้ใน OpenStreetMap) เก็บไว้แค่ 2 จุดที่ยืนยันได้จริง
+       ไม่ปั้นพิกัดที่เหลือ ---- */
+    furongHotel:{ic:"🏨",title:"悬园·观景庭院民宿（芙蓉镇景区店）",desc:"ที่พักวันที่ 3 ของทริปหูหนาน (Xuanyuan Courtyard B&B) · วิวน้ำตกฝูหรง",lng:109.9439238,lat:28.7458229,city:"ฝูหรง",type:"hotel"},
+    zjjHotel:{ic:"🏨",title:"喜见·枫庭酒店（张家界国家森林公园标志门店）",desc:"ที่พักวันที่ 4 ของทริปหูหนาน (Xijian Shanyu) · หน้าอุทยานจางเจียเจี้ย — ชื่อใน OSM ต่างจากแผนทริปเล็กน้อย (คนละแบรนด์ย่อยของเชนเดียวกัน ที่ตั้งเดียวกัน) ควรเช็คซ้ำก่อนใช้จริง",lng:110.5420018,lat:29.3511187,city:"จางเจียเจี้ย",type:"hotel"}
   };
   /* ---- จุดกึ่งกลาง+ซูมของแต่ละเมือง ใช้ "สถานีรถไฟหลัก" ของเมืองนั้นเป็นหมุด default (ตามที่ป๋าโจขอ)
      พิกัดยืนยันจาก OpenStreetMap (Overpass API) ทุกจุด ไม่ใช่พิกัดเดา · "ประเทศจีน" เป็นตัวเลือกพิเศษ
@@ -1764,12 +1769,11 @@
     Object.keys(pinData).forEach(function(id){
       var d=pinData[id];
       var el=document.createElement("div");
-      var isStation=d.type==="station";
-      el.className="gp-pin"+(isStation?" gp-pin-station":"")+(id==="ifs"?" selected":"");
-      // สถานีรถไฟใช้สีฟ้าอมเขียว (cyan) แยกจากหมุดที่เที่ยว/ร้าน (สีทอง) ให้ดูออกทันทีว่าอันไหนคือฮับเดินทาง
-      el.innerHTML=isStation
-        ?'<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="#22d3ee" stroke="#083344" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>'
-        :'<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="#f59e0b" stroke="#78350f" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>';
+      // 3 กลุ่มหมุด แยกสีให้ดูออกทันทีว่าอันไหนคืออะไร: สถานีรถไฟ (ฟ้า) / ที่พัก (ม่วง) / ที่เที่ยว-ร้าน (ทอง, ค่าเริ่มต้น)
+      var pinColors={station:["#22d3ee","#083344"],hotel:["#a78bfa","#4c1d95"],attraction:["#f59e0b","#78350f"]};
+      var pc=pinColors[d.type]||pinColors.attraction;
+      el.className="gp-pin"+(d.type?" gp-pin-"+d.type:"")+(id==="ifs"?" selected":"");
+      el.innerHTML='<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="'+pc[0]+'" stroke="'+pc[1]+'" stroke-width="1"/><circle cx="11" cy="11" r="4.5" fill="#0f172a"/></svg>';
       el.setAttribute("role","button");el.setAttribute("tabindex","0");
       el.setAttribute("aria-label","หมุด: "+d.title);
       el.addEventListener("click",function(){selectPin(id)});
