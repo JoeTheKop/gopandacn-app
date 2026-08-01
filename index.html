@@ -1167,6 +1167,11 @@
             <p>BKK → ฉางซา (CSX)<br>12 – 21 ก.ย. · China Southern จองแล้ว ✓</p>
             <span class="book-foot"><span class="aff-note">เทียบทุกสายการบิน</span><span class="book-go">จองเลย ↗</span></span>
           </a>
+          <a class="book-card" id="bkHotel" target="_blank" rel="noopener sponsored">
+            <span class="book-top"><span class="book-ic">🏨</span><b>จองที่พัก</b><span class="partner trip">Trip.com</span></span>
+            <p>โรงแรม/ที่พักทุกเมืองในทริป<br>เทียบราคา จองล่วงหน้าได้เลย</p>
+            <span class="book-foot"><span class="aff-note">ยกเลิกฟรีส่วนใหญ่</span><span class="book-go">จองเลย ↗</span></span>
+          </a>
           <a class="book-card" id="bkTrain" target="_blank" rel="noopener sponsored">
             <span class="book-top"><span class="book-ic">🚄</span><b>ตั๋วรถไฟจีน</b><span class="partner trip">Trip.com</span></span>
             <p>ฉางซาใต้ → จางเจียเจี้ยตะวันตก<br>เปิดจองล่วงหน้า 15 วัน</p>
@@ -2858,6 +2863,7 @@
     return u?'<a class="bbook" target="_blank" rel="noopener sponsored" href="'+u+'" title="จองผ่านพันธมิตร">🎟️ จอง</a>':'';
   }
   $("#bkFlight").href=tripUrl("flights/showfarefirst",{dcity:"bkk",acity:"csx",ddate:"2026-09-12",rdate:"2026-09-21",triptype:"rt",quantity:1});
+  $("#bkHotel").href="https://www.trip.com/t/lcO7YWvrkV2"; // ลิงก์พันธมิตรที่ป๋าโจให้มาโดยตรง ไม่ผ่าน tripUrl() เพราะเป็นลิงก์สำเร็จรูปแล้ว
   $("#bkTrain").href=tripUrl("trains/list",{departurecity:"Changsha",arrivalcity:"Zhangjiajie",departdate:"2026-09-12"});
   $("#bkTripTtd").href=tripUrl("things-to-do/list",{keyword:"Zhangjiajie"});
   $("#bkKlook").href=klookUrl("จางเจียเจี้ย Zhangjiajie");
