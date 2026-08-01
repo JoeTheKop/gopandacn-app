@@ -1661,14 +1661,19 @@
     thaiwoo:{ic:"⛷️",title:"ไท่อู่ สกีรีสอร์ต (太舞滑雪场)",desc:"太舞滑雪小镇 (Thaiwoo) · พิกัดยืนยันจาก OpenStreetMap",lng:115.4366885,lat:40.8833809,city:"ฉงลี่"},
     yunding:{ic:"⛷️",title:"มี่หย่วน หยุนติ่ง (密苑云顶乐园)",desc:"หรือชื่อ Genting Secret Garden / Yunding Ski Park · พิกัดยืนยันจาก OpenStreetMap",lng:115.4185984,lat:40.9483320,city:"ฉงลี่"}
   };
+  /* ---- จุดกึ่งกลาง+ซูมของแต่ละเมือง ใช้ "สถานีรถไฟหลัก" ของเมืองนั้นเป็นหมุด default (ตามที่ป๋าโจขอ)
+     พิกัดยืนยันจาก OpenStreetMap (Overpass API) ทุกจุด ไม่ใช่พิกัดเดา · "ประเทศจีน" เป็นตัวเลือกพิเศษ
+     จุดกึ่งกลางคำนวณจากรูปทรงมณฑลจริง (area-weighted centroid) ไม่ใช่พิกัดจำ ต้องอยู่ตัวแรกของอ็อบเจกต์
+     เพราะ Object.keys() เรียงตามลำดับที่ใส่ ใช้กำหนดลำดับ dropdown "ดูแผนที่เมืองอื่น" ด้วย */
   var cityCenters={
-    "ฉางซา":{lng:pinData.ifs.lng,lat:pinData.ifs.lat,zoom:13},
-    "ฉงลี่":{lng:pinData.yunding.lng,lat:pinData.yunding.lat,zoom:11},
-    "ปักกิ่ง":{lng:116.469,lat:39.883,zoom:10}, // ยังไม่มีหมุด POI คัดสรร แค่แผนที่จริงให้เลื่อนดูได้
-    "เทียนจิน":{lng:117.116,lat:39.409,zoom:10},
-    "จางเจียเจี้ย":{lng:110.4029,lat:29.0163,zoom:12}, // ศูนย์กลางใกล้ Qixingshan (七星山) International Adventure Park
-    "เฟิ่งหวง":{lng:109.595,lat:27.94,zoom:13},
-    "ฝูหรง":{lng:110.0,lat:28.78,zoom:13}
+    "ประเทศจีน":{lng:103.8229,lat:36.5624,zoom:3},
+    "ฉางซา":{lng:113.058967,lat:28.150084,zoom:11.5}, // สถานีฉางซาใต้ 长沙南站
+    "ฉงลี่":{lng:115.441134,lat:40.912367,zoom:11.5}, // สถานีไท่จื่อเฉิง 太子城站 (ใจกลางโซนสกี)
+    "ปักกิ่ง":{lng:116.372753,lat:39.863555,zoom:11.5}, // สถานีปักกิ่งใต้ 北京南站
+    "เทียนจิน":{lng:117.203684,lat:39.135752,zoom:11.5}, // สถานีเทียนจิน 天津站
+    "จางเจียเจี้ย":{lng:110.458002,lat:29.171368,zoom:11.5}, // สถานีจางเจียเจี้ยตะวันตก 张家界西站
+    "เฟิ่งหวง":{lng:109.59919,lat:28.020509,zoom:11.5}, // สถานีเฟิ่งหวงกู่เฉิง 凤凰古城站
+    "ฝูหรง":{lng:109.982015,lat:28.773023,zoom:11.5} // สถานีฝูหรงเจิ้น 芙蓉镇站
   };
   var pinMarkers={};
   /* ---- WGS-84 → GCJ-02 (สูตรมาตรฐานสาธารณะที่ใช้กันทั่วไปในงานแผนที่จีน ไม่ใช่ของ Amap เอง)
@@ -1740,7 +1745,7 @@
   maplibregl.addProtocol("pmtiles",pmProtocol.tile);
   var gpMap=new maplibregl.Map({
     container:"mapCanvas",style:"map-style.json",
-    center:[pinData.ifs.lng,pinData.ifs.lat],zoom:13,
+    center:[pinData.ifs.lng,pinData.ifs.lat],zoom:11.5,maxZoom:17,
     attributionControl:{compact:true,customAttribution:"© OpenStreetMap contributors"}
   });
   window.gpMap=gpMap; // เปิดให้ debug ผ่าน console ได้ (ไม่กระทบ UX)
@@ -1834,7 +1839,8 @@
     if(city){
       msg.hidden=true;
       gpMap.flyTo({center:[city.lng,city.lat],zoom:city.zoom});
-      showCityPinState(name);
+      if(name==="ประเทศจีน")$("#pinPop").classList.remove("show"); // มุมมองทั้งประเทศ ไม่มี POI ระดับเมืองให้โชว์
+      else showCityPinState(name);
     }else{
       msg.hidden=false;
       msg.textContent="⚠️ แผนที่จริงของ"+name+"ยังไม่พร้อม — ตอนนี้มีแค่ฉางซา/ฉงลี่/ปักกิ่ง/เทียนจินที่ใช้แผนที่ออฟไลน์จริงได้";
