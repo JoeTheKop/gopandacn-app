@@ -1101,6 +1101,12 @@
             </div>
           </div>
         </div>
+        <div class="modal-card" style="margin-bottom:12px">
+          <div class="wp-head">🗺️ แผนที่ออฟไลน์สำหรับทริปนี้</div>
+          <div class="sub2" style="margin-top:2px">ต้องดาวน์โหลดให้ครบ<b>ก่อนขึ้นเครื่อง</b> ถึงจะใช้แผนที่ได้ตอนไม่มีสัญญาณในจีน</div>
+          <div id="tileReadyList" style="display:flex;flex-direction:column;gap:6px;margin-top:10px"></div>
+          <button class="btn-gold" id="tileReadyDownloadBtn" style="width:100%;margin-top:10px;justify-content:center;display:none">⬇️ ดาวน์โหลดที่เหลือ</button>
+        </div>
         <div class="cl-grid" id="clGrid"></div>
       </section>
 
@@ -1834,6 +1840,7 @@
     $("#viewSub").textContent=titles[v][1];
     $("#modePlan").classList.toggle("active",v==="plan");
     $("#modeTrip").classList.toggle("active",v!=="plan");
+    if(v==="ready"&&typeof renderTileReadyCard==="function")renderTileReadyCard();
     closeDrawers();
   }
   $("#modePlan").addEventListener("click",function(){showView("plan")});
@@ -2140,38 +2147,89 @@
   /* ---- ดาวน์โหลดแผนที่ออฟไลน์ของทริปนี้ล่วงหน้า (feature: แทนที่การ precache รวมทุกเมืองแบบเดิม
      ที่ทำให้ทุกคนโหลดของทุกเมืองแม้ทริปนั้นไม่ได้ไป) — เก็บใน cache แยกจาก SHELL_CACHE
      (gopanda-tiles-v1 เดียวกับที่ sw.js ใช้ serve) เพื่อไม่ให้การ bump SHELL_CACHE รอบต่อๆ ไป
-     ทำให้ต้องโหลด tile ซ้ำทุกครั้ง — ยังไม่มี progress bar สวยๆ (ดูข้อ 3.4 ใน ARCHITECTURE-ROADMAP.md) ---- */
+     ทำให้ต้องโหลด tile ซ้ำทุกครั้ง ---- */
   var TILE_CACHE_NAME="gopanda-tiles-v1";
+  function tripTileCities(){
+    var seen={};
+    return (activeTrip.cities||[]).map(function(c){return {th:c,key:CITY_TILE_KEY[c]}})
+      .filter(function(x){return x.key&&!seen[x.key]&&(seen[x.key]=1)});
+  }
   function downloadTripTiles(){
-    var btn=$("#mapDownloadTiles");
-    var cities=(activeTrip.cities||[]).map(function(c){return CITY_TILE_KEY[c]}).filter(Boolean);
-    cities=cities.filter(function(k,i){return cities.indexOf(k)===i}); // dedupe
+    var mapBtn=$("#mapDownloadTiles"),readyBtn=$("#tileReadyDownloadBtn");
+    var cities=tripTileCities().map(function(x){return x.key});
     if(!cities.length){
-      btn.textContent="∅";setTimeout(function(){btn.textContent="⬇️"},1500);
+      mapBtn.textContent="∅";setTimeout(refreshMapDownloadBtn,1500);
       return;
     }
-    btn.disabled=true;
+    mapBtn.disabled=true;if(readyBtn)readyBtn.disabled=true;
     caches.open(TILE_CACHE_NAME).then(function(cache){
       var done=0,failed=0;
       function next(){
         if(done+failed>=cities.length){
-          btn.textContent=failed?"⚠️":"✓";btn.disabled=false;
-          setTimeout(function(){btn.textContent="⬇️"},2500);
+          mapBtn.textContent=failed?"⚠️":"✓";mapBtn.disabled=false;
+          setTimeout(refreshMapDownloadBtn,2500);
+          renderTileReadyCard();
           return;
         }
         var url="tiles/"+cities[done+failed]+".pmtiles";
         cache.match(url).then(function(hit){
           return hit?Promise.resolve():cache.add(url);
         }).then(function(){
-          done++;btn.textContent="⬇️ "+(done+failed)+"/"+cities.length;next();
+          done++;mapBtn.textContent="⬇️ "+(done+failed)+"/"+cities.length;next();
         }).catch(function(){
-          failed++;btn.textContent="⬇️ "+(done+failed)+"/"+cities.length;next(); // ข้ามไฟล์ที่โหลดพลาด (เช่นไม่มีเน็ต) ไม่ให้ค้าง
+          failed++;mapBtn.textContent="⬇️ "+(done+failed)+"/"+cities.length;next(); // ข้ามไฟล์ที่โหลดพลาด (เช่นไม่มีเน็ต) ไม่ให้ค้าง
         });
       }
       next();
     });
   }
   $("#mapDownloadTiles").addEventListener("click",downloadTripTiles);
+  $("#tileReadyDownloadBtn").addEventListener("click",downloadTripTiles);
+
+  /* ---- ตัวบอกสถานะพร้อมออฟไลน์จริง (feature: เดิมไม่มีทางรู้เลยว่าดาวน์โหลดครบหรือยังก่อนขึ้นเครื่อง
+     ตอนนี้เช็คสถานะจริงจาก TILE_CACHE ทุกครั้งที่โหลดทริป/สลับทริป/เปิดหน้าเช็กลิสต์ก่อนบิน
+     ดู ARCHITECTURE-ROADMAP.md § 3.4 ---- */
+  function tileReadinessStatus(){
+    var cities=tripTileCities();
+    if(!cities.length)return Promise.resolve([]);
+    return caches.open(TILE_CACHE_NAME).then(function(cache){
+      return Promise.all(cities.map(function(c){
+        return cache.match("tiles/"+c.key+".pmtiles").then(function(hit){
+          if(!hit)return {th:c.th,ready:false};
+          return hit.clone().blob().then(function(b){return {th:c.th,ready:true,size:b.size}});
+        });
+      }));
+    });
+  }
+  function refreshMapDownloadBtn(){
+    var btn=$("#mapDownloadTiles");
+    if(!btn||btn.disabled)return;
+    tileReadinessStatus().then(function(results){
+      if(!results.length){btn.textContent="⬇️";return}
+      var readyCount=results.filter(function(r){return r.ready}).length;
+      btn.textContent=readyCount===results.length?"🗺️✓":"🗺️"+readyCount+"/"+results.length;
+      btn.title=readyCount===results.length?"แผนที่ออฟไลน์พร้อมครบแล้ว":"ดาวน์โหลดแผนที่ออฟไลน์สำหรับทริปนี้ ("+readyCount+"/"+results.length+" พร้อมแล้ว)";
+    });
+  }
+  function renderTileReadyCard(){
+    var box=$("#tileReadyList");
+    if(!box)return;
+    tileReadinessStatus().then(function(results){
+      if(!results.length){
+        box.innerHTML='<div class="sub2">ทริปนี้ยังไม่มีเมืองที่มีแผนที่ออฟไลน์ให้ดาวน์โหลด</div>';
+        $("#tileReadyDownloadBtn").style.display="none";
+        return;
+      }
+      box.innerHTML=results.map(function(r){
+        return '<div class="doc-item"><span class="doc-ic">'+(r.ready?"✅":"⬇️")+'</span>'+
+          '<span class="doc-name" style="cursor:default;text-decoration:none">'+esc(r.th)+'</span>'+
+          '<span class="doc-size num">'+(r.ready?fmtBytes(r.size):"ยังไม่ได้โหลด")+'</span></div>';
+      }).join("");
+      var readyCount=results.filter(function(r){return r.ready}).length;
+      $("#tileReadyDownloadBtn").style.display=readyCount<results.length?"":"none";
+      refreshMapDownloadBtn();
+    });
+  }
 
   /* ---- ชิปเมือง (feature: กรองเมืองตามทริปที่เปิดอยู่ ไม่ปนข้ามทริป) ----
      renderCityChips ถูกเรียกจริงจาก renderTripCardMeta() (ทำงานหลัง activeTrip
@@ -3778,6 +3836,9 @@
         dayCount=Math.round((d2-d1)/86400000)+1;
       }
     }
+    // นำเข้าไฟล์แทนที่ days ทั้งก้อนภายใต้ tripId เดิม — stop เดิมทั้งหมด (พร้อม stopId เดิม) หายไป
+    // เอกสารแนบที่เคยผูกกับ stopId เก่าจะกลายเป็นกำพร้าทันที เคลียร์ทิ้งไปพร้อมกันเลย (เหมือน deleteTrip)
+    docList(activeTrip.id).then(function(list){list.forEach(function(f){docDelete(f.id)})});
     activeTrip={id:activeTrip.id,name:tripName,sub:activeTrip.sub,
       startDate:startDate||"2026-09-12",dayCount:dayCount||Object.keys(gopandaImportData.days||{}).length||10,
       budget:tm.budget||6000,cities:tm.cities||[]};
@@ -4083,6 +4144,7 @@
     renderBoard();renderDay(curDay);renderTripCardMeta();updateReady();
     renderChecklist();renderJournalSummary();renderJournalEntries();
     if(typeof renderTripDocs==="function")renderTripDocs();
+    if(typeof refreshMapDownloadBtn==="function")refreshMapDownloadBtn();
   }
   function switchTrip(id){
     if(id===activeTrip.id)return;
@@ -4115,6 +4177,9 @@
     setTimeout(function(){toast.hidden=true},5000);
   }
   function deleteTrip(id){
+    // เอกสารแนบ (IndexedDB gopanda_docs_v1) ผูกกับ tripId ตรงๆ ไม่ได้ลบตามทริปอัตโนมัติ
+    // ถ้าไม่เคลียร์ตรงนี้จะค้างสะสมไปเรื่อยๆ จนอาจกินโควตาจนเบราว์เซอร์ไล่แคชแผนที่ทิ้ง (ดู ARCHITECTURE-ROADMAP.md § 3.5)
+    docList(id).then(function(list){list.forEach(function(f){docDelete(f.id)})});
     var list=loadTripsList().filter(function(t){return t.id!==id});
     saveTripsList(list);
     if(activeTrip.id===id){
