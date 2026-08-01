@@ -643,7 +643,10 @@
     border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);
     padding:6px 12px;border-radius:999px;
   }
-  .board{display:flex;gap:12px;overflow-x:auto;flex:1;padding-bottom:8px;align-items:flex-start}
+  /* min-height กันบอร์ดยุบเหลือแค่ไม่กี่ px — เพราะ .view-plan มีการ์ดจอง/ฟอร์มสร้างทริป/เอกสารแนบ
+     อยู่ก่อนบอร์ด สูงรวมกันเกิน viewport มือถือได้ง่าย พอเกิดแบบนั้น flex:1 จะเหลือพื้นที่ให้บอร์ดแทบ 0
+     (flex:1 แจกพื้นที่ที่เหลือ ไม่ได้การันตีขนาดขั้นต่ำ) ใส่ min-height ไว้กันบอร์ดหายไปทั้งอันแบบนี้ */
+  .board{display:flex;gap:12px;overflow-x:auto;flex:1;min-height:420px;padding-bottom:8px;align-items:flex-start}
   .bcol{
     flex:none;width:252px;background:rgba(15,23,42,.55);
     border:1px solid var(--border);border-radius:var(--radius);
