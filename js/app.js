@@ -1619,11 +1619,11 @@ import {DISCOVERY} from "./discovery-data.js";
   function discoveryCardHTML(card){
     var seniorBadge=(card.seniorScore!=null&&card.seniorScore>=4)
       ?html`<span class="tag" title="${card.seniorNote||''}">♿ ${card.seniorScore}/5</span>`:'';
-    return html`<div class="stop"><div class="stop-card"><div class="stop-body"><h4>${card.name_th}</h4><p>${card.pitch}</p>`+
+    return html`<div class="stop-card"><div class="stop-body"><h4>${card.name_th}</h4><p>${card.pitch}</p>`+
       html`<span class="tag ${card.cat[0]}">${card.cat[1]}</span>`+seniorBadge+
       (card.note?html`<p style="font-size:.72rem;color:var(--faint);margin-top:4px">💡 ${card.note}</p>`:'')+
       `<button class="btn-gold" data-discovery-add="${card.id}" style="margin-top:8px;width:100%;justify-content:center">＋ เพิ่มเข้าไอเดีย</button>`+
-      '</div></div></div>';
+      '</div></div>';
   }
   function renderDiscoveryList(){
     var city=/** @type {HTMLSelectElement} */($("#discoveryCity")).value;
@@ -1651,6 +1651,7 @@ import {DISCOVERY} from "./discovery-data.js";
   });
   $("#discoveryModal").addEventListener("click",function(e){
     if(!e.target.closest(".picker-panel"))$("#discoveryModal").classList.remove("show");
+    if(e.target.closest("#discoveryClose"))$("#discoveryModal").classList.remove("show");
     var addBtn=e.target.closest("[data-discovery-add]");
     if(addBtn)addDiscoveryCard(/** @type {HTMLElement} */(addBtn).dataset.discoveryAdd);
   });
