@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "GoPandaCN Dark",
+  "name": "GoPandaCN Light (Direction C experiment, 2026-08-04)",
   "metadata": {
     "gopandacn:note": "per-city vector source+layers (water/landuse/buildings/roads/roads-label) are added/removed at runtime by loadCityTiles() in gopandacn-prototype.html, not declared statically here — see ARCHITECTURE-ROADMAP.md § 3.2. This file only has the always-on world/China backdrop."
   },
@@ -15,16 +15,30 @@
       "type": "geojson",
       "data": "map-data/china-provinces.geojson",
       "attribution": "© Natural Earth"
+    },
+    "city-bounds": {
+      "type": "geojson",
+      "data": {
+        "type": "FeatureCollection",
+        "features": [
+          { "type": "Feature", "properties": { "city": "ปักกิ่ง" }, "geometry": { "type": "Polygon", "coordinates": [[[116.1477768,39.7541407],[116.790149,39.7541407],[116.790149,40.0113548],[116.1477768,40.0113548],[116.1477768,39.7541407]]] } },
+          { "type": "Feature", "properties": { "city": "ฉงลี่" }, "geometry": { "type": "Polygon", "coordinates": [[[115.3630784,40.8533809],[115.4666885,40.8533809],[115.4666885,40.9913283],[115.3630784,40.9913283],[115.3630784,40.8533809]]] } },
+          { "type": "Feature", "properties": { "city": "เฟิ่งหวง" }, "geometry": { "type": "Polygon", "coordinates": [[[109.5687,27.918],[109.629,27.918],[109.629,27.9783],[109.5687,27.9783],[109.5687,27.918]]] } },
+          { "type": "Feature", "properties": { "city": "ฝูหรง" }, "geometry": { "type": "Polygon", "coordinates": [[[110.02,28.75],[110.081,28.75],[110.081,28.811],[110.02,28.811],[110.02,28.75]]] } },
+          { "type": "Feature", "properties": { "city": "เทียนจิน" }, "geometry": { "type": "Polygon", "coordinates": [[[116.8992966,39.0324533],[117.3325161,39.0324533],[117.3325161,39.7855639],[116.8992966,39.7855639],[116.8992966,39.0324533]]] } }
+        ]
+      },
+      "attribution": "GoPandaCN — ขอบเขตจริงจากไฟล์ pmtiles รายเมือง (อ่านจาก header ตรงๆ 2026-08-04) — ฉางซา/จางเจียเจี้ยถูกตัดออกแล้วเพราะ rebuild เป็น progressive zoom (z6-16 จริง) ไปแล้ว ไม่ต้องใช้กรอบคร่าวๆ อีก เหลือแค่ 5 เมืองที่ยังมีข้อมูลแค่ z11-16 เหมือนเดิม"
     }
   },
   "layers": [
-    { "id": "bg", "type": "background", "paint": { "background-color": "#0a1324" } },
+    { "id": "bg", "type": "background", "paint": { "background-color": "#f7f8f7" } },
     {
       "id": "country-fill",
       "type": "fill",
       "source": "world-outline",
       "maxzoom": 13,
-      "paint": { "fill-color": "#101d33" }
+      "paint": { "fill-color": "#e2e8e5" }
     },
     {
       "id": "province-line",
@@ -32,14 +46,31 @@
       "source": "china-provinces",
       "minzoom": 3,
       "maxzoom": 13,
-      "paint": { "line-color": "#20304d", "line-width": 0.6, "line-dasharray": [2, 2] }
+      "paint": { "line-color": "#8fa89f", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 8, 1.3], "line-dasharray": [3, 2] }
     },
     {
       "id": "country-line",
       "type": "line",
       "source": "world-outline",
       "maxzoom": 13,
-      "paint": { "line-color": "#2c3f5c", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.5, 8, 1.4] }
+      "paint": { "line-color": "#4f7268", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.7, 8, 1.8] }
+    },
+    {
+      "id": "city-bounds-fill",
+      "type": "fill",
+      "source": "city-bounds",
+      "minzoom": 10.5,
+      "maxzoom": 11,
+      "metadata": { "gopandacn:note": "กรอบคร่าวๆ ของเมืองที่มีแผนที่ออฟไลน์จริง — เติมช่องว่างระหว่าง zoom 10.5 (ป๋าโจขอ 2026-08-04) ถึง 11 (จุดที่ tile รายละเอียดจริงเริ่มโหลด, ดู loadCityTiles ใน js/app.js) ไม่ใช่ถนน/แม่น้ำ/อาคารจริง — แค่บอกว่า 'ตรงนี้มีแผนที่ละเอียดรอไว้แล้ว'" },
+      "paint": { "fill-color": "#0f8a6c", "fill-opacity": 0.08 }
+    },
+    {
+      "id": "city-bounds-line",
+      "type": "line",
+      "source": "city-bounds",
+      "minzoom": 10.5,
+      "maxzoom": 11,
+      "paint": { "line-color": "#4f9c88", "line-width": 1.2, "line-dasharray": [2, 1.5] }
     }
   ]
 }

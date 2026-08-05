@@ -1,4 +1,7 @@
 // @ts-check
+export function $(s,c){return (c||document).querySelector(s)}
+export function $$(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))}
+
 export function uid(prefix){return (prefix||"id_")+Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 
 export function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
@@ -35,3 +38,5 @@ export function parseCsv(text){
 }
 
 export function toMin(t){if(!t||t==="--")return null;var p=t.split(":");return (+p[0])*60+(+p[1]||0)}
+
+export function fmtBytes(n){return n<1024?n+" B":n<1048576?Math.round(n/1024)+" KB":(n/1048576).toFixed(1)+" MB"}

@@ -19,6 +19,7 @@ const SHELL = [
   "./icons/icon-192.png", "./icons/icon-512.png",
   "./map-style.json",
   "./js/app.js", "./js/utils.js", "./js/docs.js", "./js/booking-links.js", "./js/discovery-data.js",
+  "./templates/changsha-zhangjiajie-5d.gopanda",
   "./map-data/world-outline.geojson", "./map-data/china-provinces.geojson",
   "./vendor/maplibre/maplibre-gl.js", "./vendor/maplibre/maplibre-gl.css",
   "./vendor/pmtiles/pmtiles.js",

@@ -167,6 +167,136 @@
   .views{flex:1;min-height:0;position:relative}
   .view{position:absolute;inset:0;display:none;flex-direction:column;overflow-y:auto;padding:22px}
   .view.active{display:flex;animation:fadeUp .3s ease}
+  /* view สำหรับใช้เป็นเนื้อหาข้างในลิ้นชัก (.ph-drawer) — override .view{display:none} โดยไม่ต้องมี .active
+     ดู docs/design/TRIP-PLANNING-WORKFLOW.md — ผัง Planning hero 2026-08-04 */
+  .view.as-drawer{display:flex;position:static;inset:auto;padding:0;overflow-y:visible;animation:none}
+
+  /* ===== Planning hero (ผัง 2026-08-04) — โทน Direction C สโคปเฉพาะหน้านี้ ===== */
+  .app.plan-active .sidebar,.app.plan-active .dock{display:none}
+  .app.plan-active{grid-template-columns:1fr}
+  /* Direction C — remap ตัวแปรเดิมตรงๆ (ไม่ใช่แค่เพิ่มชื่อใหม่) ให้คอมโพเนนต์เดิมทั้งหมด
+     (.modal-card, .book-card, .btn-gold, .tag, .timeline .stop-card ฯลฯ) ได้โทนสีใหม่อัตโนมัติ
+     โดยไม่ต้องไล่ override ทีละคลาส — ใช้ทั้งใน #view-plan และ #phDrawer (ลิ้นชักอยู่นอก DOM
+     ของ #view-plan จึงต้องประกาศซ้ำ ดู js/app.js openPhDrawer) */
+  #view-plan,#phDrawer{
+    --bg:#f7f8f7; --panel:#ffffff; --panel-2:#eef1ef; --border:#dde5e1; --border-soft:#e5ebe8;
+    --text:#16201c; --muted:#5b6a63; --faint:#8a978f;
+    --gold:#0f8a6c; --gold-2:#0b6d55; --gold-soft:rgba(15,138,108,.1);
+    --emerald:#0f8a6c; --cyan:#0e7490; --glass:rgba(255,255,255,.85);
+    --pc-bg:var(--bg); --pc-panel:var(--panel); --pc-panel-2:var(--panel-2); --pc-border:var(--border);
+    --pc-ink:var(--text); --pc-dim:var(--muted); --pc-faint:var(--faint);
+    --pc-accent:var(--gold); --pc-accent-ink:#f2fbf8; --pc-warn:#c47a1f;
+  }
+  #view-plan{background:var(--bg); color:var(--text); padding:0}
+  #phDrawer{background:var(--panel)}
+  .ph-topbar{
+    flex:none; display:flex; align-items:center; gap:14px; padding:14px 22px;
+    border-bottom:1px solid var(--pc-border); background:var(--pc-panel);
+  }
+  .ph-topbar .ph-trip{display:flex; flex-direction:column; gap:2px; min-width:0}
+  .ph-topbar .ph-trip b{font-size:.98rem; color:var(--pc-ink); white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ph-topbar .ph-trip span{font-size:.76rem; color:var(--pc-dim)}
+  /* #planBudget เป็น span.budget-chip ที่ renderBoard() เขียน className ทับเองทุกครั้ง (ดู js/app.js)
+     เลยห้ามฝาก class ไว้ที่ตัว element — ต้องสไตล์ผ่าน context selector แทน */
+  .ph-topbar .budget-chip{
+    margin-left:auto; font-family:inherit; font-size:.78rem; font-weight:700; color:var(--pc-accent);
+    background:rgba(15,138,108,.1); border:1px solid rgba(15,138,108,.25); border-radius:999px; padding:5px 13px;
+    flex:none; white-space:nowrap;
+  }
+  .ph-topbar .budget-chip.over{color:var(--pc-warn);background:rgba(196,122,31,.1);border-color:rgba(196,122,31,.3)}
+  .ph-body{flex:1; min-height:0; display:flex}
+  .ph-rail{
+    flex:none; width:56px; border-right:1px solid var(--pc-border); background:var(--pc-panel);
+    display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 0; overflow-y:auto;
+  }
+  .ph-rail button{
+    width:40px;height:40px;border-radius:11px;font-size:1.15rem;
+    display:flex;align-items:center;justify-content:center;color:var(--pc-dim);
+    transition:background .15s,color .15s;
+  }
+  .ph-rail button:hover{background:var(--pc-panel-2);color:var(--pc-ink)}
+  .ph-rail button[aria-current="true"]{background:rgba(15,138,108,.12);color:var(--pc-accent)}
+  .ph-rail .ph-rail-sep{width:28px;height:1px;background:var(--pc-border);margin:4px 0;flex:none}
+  .ph-rail details{position:relative}
+  .ph-rail details summary{
+    width:40px;height:40px;border-radius:11px;font-size:1.15rem;list-style:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:var(--pc-dim);
+  }
+  .ph-rail details summary::-webkit-details-marker{display:none}
+  .ph-rail details summary:hover{background:var(--pc-panel-2);color:var(--pc-ink)}
+  .ph-rail details[open] summary{background:rgba(15,138,108,.12);color:var(--pc-accent)}
+  .ph-more-menu{
+    position:absolute; left:52px; bottom:0; z-index:5; width:220px;
+    background:var(--pc-panel); border:1px solid var(--pc-border); border-radius:12px;
+    box-shadow:0 12px 30px rgba(22,32,28,.15); padding:8px; display:flex; flex-direction:column; gap:2px;
+  }
+  .ph-more-menu a,.ph-more-menu button{
+    display:block; width:100%; text-align:left; padding:8px 10px; border-radius:8px; font-size:.8rem;
+    color:var(--pc-ink); text-decoration:none;
+  }
+  .ph-more-menu a:hover,.ph-more-menu button:hover{background:var(--pc-panel-2)}
+
+  .ph-hero{flex:1; min-width:0; overflow-y:auto; padding:20px 24px}
+  .ph-hero .itin-head h3{color:var(--pc-ink)}
+  .ph-hero .itin-head em{color:var(--pc-dim)}
+  .ph-hero .sub2,.ph-hero .aff-note,.ph-hero .sub{color:var(--pc-dim)}
+  .ph-hero .plan-note{color:var(--pc-faint)}
+  .ph-hero .timeline .stop-card{background:var(--pc-panel); border-color:var(--pc-border)}
+  .ph-hero .timeline .stop-body h4{color:var(--pc-ink)}
+  .ph-hero .timeline .stop-body p{color:var(--pc-dim)}
+  .ph-hero .day-strip .day-chip{color:var(--pc-dim)}
+  .ph-hero .add-stop{border-color:var(--pc-border); color:var(--pc-dim)}
+  .ph-hero .btn-gold{background:var(--pc-accent); color:var(--pc-accent-ink)}
+  .ph-hero .btn-ghost{border:1px solid var(--pc-border); color:var(--pc-ink)}
+  .ph-hero-section{margin-top:26px; padding-top:18px; border-top:1px dashed var(--pc-border)}
+
+  /* ===== ฝั่งขวา: คลังสถานที่ inline (รวมมาจาก modal เดิม, ดู task #6 2026-08-04) =====
+     ยังไม่มีแผนที่จริงในนี้ — Stop/DiscoveryCard ไม่มี field พิกัด (gps/lat/lng) เลยสักตัว
+     เลยยังปักหมุดตามไทม์ไลน์ไม่ได้ (ดู project_gopandacn_ux_redesign.md) ใส่แค่ลิงก์ไปหน้าแผนที่เต็มจอไปก่อน */
+  .ph-side{
+    flex:none; width:min(360px,34vw); border-left:1px solid var(--pc-border); background:var(--pc-panel);
+    display:flex; flex-direction:column; padding:18px 18px 0; overflow-y:auto;
+  }
+  .ph-side h3{margin:0 0 2px; font-size:.92rem; color:var(--pc-ink)}
+  .ph-side .sub2{color:var(--pc-dim)}
+  .ph-map-link{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    border:1px solid var(--pc-border); border-radius:12px; padding:11px 13px; margin-bottom:14px;
+    color:var(--pc-ink); text-decoration:none; font-size:.82rem; font-weight:700;
+  }
+  .ph-map-link:hover{border-color:var(--pc-accent); color:var(--pc-accent)}
+  .ph-map-link small{font-weight:500; color:var(--pc-dim)}
+  @media (max-width:980px){.ph-side{display:none}} /* จอแคบ: ตัดออกก่อน ยังไม่ได้ออกแบบ responsive รอบนี้ */
+
+  /* ===== ลิ้นชักเครื่องมือรอง — reparent view/section ที่มีอยู่แล้วเข้ามา ไม่ clone ซ้ำ ===== */
+  .ph-drawer{
+    position:fixed; inset:0 0 0 auto; width:min(440px,92vw); z-index:62;
+    background:var(--pc-panel,var(--panel)); border-left:1px solid var(--pc-border,var(--border));
+    box-shadow:-24px 0 50px rgba(0,0,0,.25); transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1);
+    display:flex; flex-direction:column;
+  }
+  .ph-drawer.open{transform:translateX(0)}
+  .ph-drawer-head{
+    flex:none; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:16px 18px; border-bottom:1px solid var(--pc-border,var(--border));
+  }
+  .ph-drawer-head h3{margin:0;font-size:1rem;color:var(--pc-ink,var(--text))}
+  .ph-drawer-slot{flex:1; min-height:0; overflow-y:auto; padding:16px 18px}
+
+  /* ===== หน้าจอ "สร้างทริปใหม่" — เลือกเส้นทาง เริ่มจากศูนย์ / เทมเพลต (ผัง 2026-08-04) ===== */
+  .ph-start-tabs{display:flex;gap:8px;margin-bottom:14px}
+  .ph-start-tab{
+    flex:1; padding:9px 10px; border-radius:10px; border:1px solid var(--border);
+    font-size:.8rem; font-weight:700; color:var(--muted); text-align:center;
+  }
+  .ph-start-tab.active{background:var(--gold-soft); border-color:var(--gold); color:var(--gold-2)}
+  .tpl-card{
+    border:1px solid var(--border); border-radius:12px; padding:13px 15px; background:var(--panel-2);
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .tpl-card h4{margin:0;font-size:.92rem}
+  .tpl-card p{margin:0;font-size:.76rem;color:var(--muted);line-height:1.55}
+  .tpl-card .tag{align-self:flex-start}
   @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
@@ -209,6 +339,15 @@
   .gp-pin{width:30px;height:30px;cursor:pointer;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
   .gp-pin svg{width:100%;height:100%}
   .gp-pin.selected{filter:drop-shadow(0 2px 5px rgba(245,158,11,.6)) drop-shadow(0 0 0 2px #f59e0b)}
+  /* หมุดรวมระดับเมือง (คลังสถานที่ — ทดลอง, task #8 2026-08-04) โชว์ตอนซูมออกกว้าง กดแล้วบินเข้าเมือง */
+  .gp-pin-agg{
+    width:34px;height:34px;border-radius:50%;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 35% 30%,#fbbf24,#d97706);
+    border:2px solid #fef3c7;color:#451a03;font-weight:800;font-size:.78rem;
+    box-shadow:0 3px 8px rgba(0,0,0,.4),0 0 0 3px rgba(245,158,11,.2);
+  }
+  .gp-pin-agg:hover{transform:scale(1.08)}
   .gp-user-dot{width:16px;height:16px;border-radius:50%;background:#22d3ee;border:2px solid #083344;
     box-shadow:0 0 0 6px rgba(34,211,238,.18)}
   .map-pin{cursor:pointer}
@@ -575,10 +714,6 @@
   }
   .picker-panel h3{margin:0;font-size:.98rem}
   .picker-panel .sub2{font-size:.73rem;color:var(--muted);margin-bottom:4px}
-  /* Discovery เต็มหน้าจอแทน modal เล็ก (ป๋าโจขอ 2026-08-04) — การ์ดเยอะ (102 ที่) ดูในกล่องแคบๆ อึดอัด */
-  #discoveryModal{padding:0}
-  #discoveryModal .picker-panel{width:100%;height:100%;max-width:100%;max-height:100%;border-radius:0}
-  .discovery-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
   #discoveryList{
     flex:1;overflow-y:auto;margin-top:8px;
     display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-content:start;
@@ -1169,107 +1304,185 @@
 
       <!-- ---------- PLANNING BOARD (Desktop) ---------- -->
       <section class="view" id="view-plan" aria-label="โต๊ะวางแผน-แก้ไขทริป">
-        <div class="modal-card" style="margin-bottom:12px">
-          <div class="wp-head">➕ สร้างทริปใหม่</div>
-          <div class="trip-form-row">
-            <input type="text" id="newTripName" class="tf-text" placeholder="ชื่อทริป เช่น ปักกิ่ง-เทียนจิน-Chongli" style="margin-top:0">
+        <div class="ph-topbar">
+          <div class="ph-trip">
+            <b id="phTripName"></b>
+            <span id="phTripMeta"></span>
           </div>
-          <div class="trip-form-row">
-            <label>วันเริ่มทริป
-              <input type="date" id="newTripStart">
-            </label>
-            <label>จำนวนวัน
-              <input type="number" id="newTripDays" min="1" max="30" value="7">
-            </label>
-            <label>งบทริป (¥)
-              <input type="number" id="newTripBudget" min="0" step="100" value="6000">
-            </label>
-          </div>
-          <button class="btn-gold" id="createTripBtn" style="width:100%;margin-top:10px;justify-content:center">สร้างทริป</button>
-        </div>
-        <div class="plan-bar">
-          <button class="btn-gold" id="openDiscovery">🔍 คลังสถานที่</button>
-          <button class="btn-gold" id="openImport">📥 นำเข้า Excel / CSV</button>
-          <button class="btn-ghost" id="exportCsv">📤 ส่งออก CSV</button>
-          <button class="btn-ghost" id="exportXlsx">📊 ส่งออก Excel (จัดฟอร์แมต)</button>
-          <a class="btn-ghost" id="dlTemplate" download="gopanda-trip-template.csv" style="display:inline-block;text-decoration:none">⬇ เทมเพลต</a>
-          <button class="btn-ghost" id="openDoctor">🩺 ตรวจแผน</button>
-          <button class="btn-ghost" id="openQr">📱 ส่งเข้ามือถือ</button>
           <span class="plan-toast" id="planToast" hidden></span>
           <span class="budget-chip num" id="planBudget"></span>
-          <span class="plan-note" style="margin-left:auto">ลากการ์ดข้ามวันได้เลย (หรือใช้ปุ่ม ◀ ▶) · sync กับหน้า "แผนเที่ยวรายวัน" ทันที</span>
         </div>
+        <div class="ph-body">
+          <nav class="ph-rail" aria-label="เครื่องมือรอง">
+            <button type="button" id="openDiscovery" title="🔍 คลังสถานที่">🔍</button>
+            <button type="button" id="railChecklist" title="✓ เช็กลิสต์ก่อนบิน" data-drawer-view="view-ready">✓</button>
+            <button type="button" id="railJournal" title="📓 สมุดบันทึก & ค่าใช้จ่าย" data-drawer-view="view-journal">📓</button>
+            <button type="button" id="railSos" title="🆘 SOS & บัตรสุขภาพ" data-drawer-view="view-sos">🆘</button>
+            <button type="button" id="railDocs" title="📎 เอกสารประจำทริป" data-drawer-node="phDocsBlock">📎</button>
+            <button type="button" id="railBooking" title="🎟️ จองตั๋วล่วงหน้า" data-drawer-node="phBookingBlock">🎟️</button>
+            <span class="ph-rail-sep"></span>
+            <button type="button" id="openDoctor" title="🩺 ตรวจแผน">🩺</button>
+            <button type="button" id="openQr" title="📱 ส่งเข้ามือถือ">📱</button>
+            <details>
+              <summary title="เครื่องมือนำเข้า/ส่งออก">⋯</summary>
+              <div class="ph-more-menu">
+                <button type="button" id="openImport">📥 นำเข้า Excel / CSV</button>
+                <button type="button" id="exportCsv">📤 ส่งออก CSV</button>
+                <button type="button" id="exportXlsx">📊 ส่งออก Excel (จัดฟอร์แมต)</button>
+                <a id="dlTemplate" download="gopanda-trip-template.csv">⬇ เทมเพลต CSV</a>
+              </div>
+            </details>
+          </nav>
 
-        <div class="itin-head" style="margin:2px 2px 0">
-          <h3>🎟️ จองตั๋วล่วงหน้า · <em>ถูกกว่าหน้างาน แถมไม่ต้องต่อคิว</em></h3>
-          <span class="aff-note">ลิงก์พันธมิตร (Affiliate) — ราคาเท่าเดิม แต่ช่วยสนับสนุนแอป 🐼</span>
-        </div>
-        <div class="book-grid">
-          <a class="book-card" id="bkFlight" target="_blank" rel="noopener sponsored">
-            <span class="book-top"><span class="book-ic">✈️</span><b>ตั๋วเครื่องบิน</b><span class="partner trip">Trip.com</span></span>
-            <p>BKK → ฉางซา (CSX)<br>12 – 21 ก.ย. · China Southern จองแล้ว ✓</p>
-            <span class="book-foot"><span class="aff-note">เทียบทุกสายการบิน</span><span class="book-go">จองเลย ↗</span></span>
-          </a>
-          <a class="book-card" id="bkHotel" target="_blank" rel="noopener sponsored">
-            <span class="book-top"><span class="book-ic">🏨</span><b>จองที่พัก</b><span class="partner trip">Trip.com</span></span>
-            <p>โรงแรม/ที่พักทุกเมืองในทริป<br>เทียบราคา จองล่วงหน้าได้เลย</p>
-            <span class="book-foot"><span class="aff-note">ยกเลิกฟรีส่วนใหญ่</span><span class="book-go">จองเลย ↗</span></span>
-          </a>
-          <a class="book-card" id="bkTrain" target="_blank" rel="noopener sponsored">
-            <span class="book-top"><span class="book-ic">🚄</span><b>ตั๋วรถไฟจีน</b><span class="partner trip">Trip.com</span></span>
-            <p>ฉางซาใต้ → จางเจียเจี้ยตะวันตก<br>เปิดจองล่วงหน้า 15 วัน</p>
-            <span class="book-foot"><span class="aff-note">ไม่ต้องใช้ 12306</span><span class="book-go">จองเลย ↗</span></span>
-          </a>
-          <a class="book-card" id="bkTripTtd" target="_blank" rel="noopener sponsored">
-            <span class="book-top"><span class="book-ic">🏞️</span><b>ตั๋วที่เที่ยว</b><span class="partner trip">Trip.com</span></span>
-            <p>Things to Do จีนครบสุด<br>จองพร้อมตั๋วบิน/รถไฟ ที่เดียวจบ</p>
-            <span class="book-foot"><span class="aff-note">จ่ายบาทได้</span><span class="book-go">จองเลย ↗</span></span>
-          </a>
-          <a class="book-card" id="bkKlook" target="_blank" rel="noopener sponsored">
-            <span class="book-top"><span class="book-ic">🎢</span><b>ตั๋วที่เที่ยว</b><span class="partner klook">Klook</span></span>
-            <p>อุทยานจางเจียเจี้ย · เทียนเหมินซาน<br>สะพานแก้ว · ลิฟต์ไป่หลง</p>
-            <span class="book-foot"><span class="aff-note">QR เข้างานทันที</span><span class="book-go">จองเลย ↗</span></span>
-          </a>
-          <a class="book-card" id="bkKkday" target="_blank" rel="noopener sponsored">
-            <span class="book-top"><span class="book-ic">🎭</span><b>ทัวร์ & กิจกรรม</b><span class="partner kkday">KKday</span></span>
-            <p>เดย์ทัวร์ไกด์ท้องถิ่น · โชว์จิ้งจอกเหมยลี่<br>ชุดฮั่นฝูถ่ายรูป</p>
-            <span class="book-foot"><span class="aff-note">รีวิวคนไทยเพียบ</span><span class="book-go">จองเลย ↗</span></span>
-          </a>
-        </div>
+          <div class="ph-hero">
+            <details style="margin-bottom:16px">
+              <summary class="btn-ghost" style="display:inline-flex;width:auto">➕ สร้างทริปใหม่</summary>
+              <div class="modal-card" style="margin-top:10px">
+                <div class="ph-start-tabs" role="tablist">
+                  <button type="button" class="ph-start-tab active" id="startTabScratch" data-start-path="scratch">🗺️ เริ่มจากศูนย์</button>
+                  <button type="button" class="ph-start-tab" id="startTabTemplate" data-start-path="template">📋 เลือกจากเทมเพลต</button>
+                </div>
 
-        <div class="itin-head" style="margin:14px 2px 0">
-          <h3>📎 เอกสารประจำทริป · <em>ตั๋วเครื่องบิน พาสปอร์ต ประกันเดินทาง ฯลฯ</em></h3>
-          <button class="btn-ghost" id="tripDocAddBtn" style="padding:5px 12px;font-size:.7rem">＋ แนบไฟล์</button>
-        </div>
-        <input type="file" id="tripDocInput" accept="image/*,.pdf" multiple hidden>
-        <div class="doc-list" id="tripDocList"></div>
-        <div class="sub2" style="margin:4px 2px 0">รองรับรูปภาพ/PDF สูงสุด 5MB ต่อไฟล์ — แนบได้หลายไฟล์ · เก็บไว้ในเครื่องนี้เท่านั้น</div>
+                <div id="startPathScratch">
+                  <div class="trip-form-row">
+                    <input type="text" id="newTripName" class="tf-text" placeholder="ชื่อทริป เช่น ปักกิ่ง-เทียนจิน-Chongli" style="margin-top:0">
+                  </div>
+                  <div class="trip-form-row">
+                    <label>วันเริ่มทริป
+                      <input type="date" id="newTripStart">
+                    </label>
+                    <label>จำนวนวัน
+                      <input type="number" id="newTripDays" min="1" max="30" value="7">
+                    </label>
+                    <label>งบทริป (¥)
+                      <input type="number" id="newTripBudget" min="0" step="100" value="6000">
+                    </label>
+                  </div>
+                  <button class="btn-gold" id="createTripBtn" style="width:100%;margin-top:10px;justify-content:center">สร้างทริป</button>
+                </div>
 
-        <div class="itin-head" style="margin:14px 2px 0">
-          <h3>🗓️ แผนเที่ยวรายวัน · <em>แก้ไขได้ที่นี่</em></h3>
-          <span class="aff-note">แตะการ์ดเพื่อแก้ไข</span>
-        </div>
-        <div class="day-strip" id="planDayStrip"></div>
-        <div class="itin-head">
-          <h3 id="planItinTitle">วัน 1 · <em>…</em></h3>
-          <div style="display:flex;gap:8px;align-items:center">
-            <span class="sub num" id="planItinMeta"></span>
-            <button class="btn-ghost" id="planOptimizeBtn" title="เรียงเส้นทางอัจฉริยะ" style="padding:5px 10px;font-size:.7rem">✨</button>
+                <div id="startPathTemplate" hidden>
+                  <div id="templateList"><div class="sub2">กำลังโหลดเทมเพลต…</div></div>
+                </div>
+              </div>
+            </details>
+
+            <div class="itin-head">
+              <h3>🗓️ แผนเที่ยวรายวัน · <em>แก้ไขได้ที่นี่</em></h3>
+              <span class="aff-note">แตะการ์ดเพื่อแก้ไข</span>
+            </div>
+            <div class="day-strip" id="planDayStrip"></div>
+            <div class="itin-head">
+              <h3 id="planItinTitle">วัน 1 · <em>…</em></h3>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="sub num" id="planItinMeta"></span>
+                <button class="btn-ghost" id="planOptimizeBtn" title="เรียงเส้นทางอัจฉริยะ" style="padding:5px 10px;font-size:.7rem">✨</button>
+              </div>
+            </div>
+            <div class="timeline" id="planTimeline"></div>
+            <button class="add-stop" id="planAddStopBtn">＋ เพิ่มจุดหมายในวันนี้</button>
+            <div class="plan-note" style="margin-top:8px">ลากการ์ดข้ามวันได้เลย (หรือใช้ปุ่ม ◀ ▶)</div>
+
+            <div class="itin-head" style="margin-top:20px">
+              <h3>💡 ไอเดียที่ยังไม่จัดวัน</h3>
+              <span class="sub num" id="backlogMeta"></span>
+            </div>
+            <div class="timeline" id="backlogTimeline"></div>
+            <button class="add-stop" id="planAddIdeaBtn">＋ เพิ่มไอเดียใหม่</button>
+
+            <!-- โซนนี้ปกติซ่อนเป็นลิ้นชัก (ph-drawer) — เห็นอยู่ตรงนี้เฉพาะตอน JS ยังไม่รัน (no-JS fallback) -->
+            <div class="ph-hero-section" id="phBookingBlock">
+              <div class="itin-head" style="margin:2px 2px 0">
+                <h3>🎟️ จองตั๋วล่วงหน้า · <em>ถูกกว่าหน้างาน แถมไม่ต้องต่อคิว</em></h3>
+                <span class="aff-note">ลิงก์พันธมิตร (Affiliate) — ราคาเท่าเดิม แต่ช่วยสนับสนุนแอป 🐼</span>
+              </div>
+              <div class="book-grid">
+                <a class="book-card" id="bkFlight" target="_blank" rel="noopener sponsored">
+                  <span class="book-top"><span class="book-ic">✈️</span><b>ตั๋วเครื่องบิน</b><span class="partner trip">Trip.com</span></span>
+                  <p>BKK → ฉางซา (CSX)<br>12 – 21 ก.ย. · China Southern จองแล้ว ✓</p>
+                  <span class="book-foot"><span class="aff-note">เทียบทุกสายการบิน</span><span class="book-go">จองเลย ↗</span></span>
+                </a>
+                <a class="book-card" id="bkHotel" target="_blank" rel="noopener sponsored">
+                  <span class="book-top"><span class="book-ic">🏨</span><b>จองที่พัก</b><span class="partner trip">Trip.com</span></span>
+                  <p>โรงแรม/ที่พักทุกเมืองในทริป<br>เทียบราคา จองล่วงหน้าได้เลย</p>
+                  <span class="book-foot"><span class="aff-note">ยกเลิกฟรีส่วนใหญ่</span><span class="book-go">จองเลย ↗</span></span>
+                </a>
+                <a class="book-card" id="bkTrain" target="_blank" rel="noopener sponsored">
+                  <span class="book-top"><span class="book-ic">🚄</span><b>ตั๋วรถไฟจีน</b><span class="partner trip">Trip.com</span></span>
+                  <p>ฉางซาใต้ → จางเจียเจี้ยตะวันตก<br>เปิดจองล่วงหน้า 15 วัน</p>
+                  <span class="book-foot"><span class="aff-note">ไม่ต้องใช้ 12306</span><span class="book-go">จองเลย ↗</span></span>
+                </a>
+                <a class="book-card" id="bkTripTtd" target="_blank" rel="noopener sponsored">
+                  <span class="book-top"><span class="book-ic">🏞️</span><b>ตั๋วที่เที่ยว</b><span class="partner trip">Trip.com</span></span>
+                  <p>Things to Do จีนครบสุด<br>จองพร้อมตั๋วบิน/รถไฟ ที่เดียวจบ</p>
+                  <span class="book-foot"><span class="aff-note">จ่ายบาทได้</span><span class="book-go">จองเลย ↗</span></span>
+                </a>
+                <a class="book-card" id="bkKlook" target="_blank" rel="noopener sponsored">
+                  <span class="book-top"><span class="book-ic">🎢</span><b>ตั๋วที่เที่ยว</b><span class="partner klook">Klook</span></span>
+                  <p>อุทยานจางเจียเจี้ย · เทียนเหมินซาน<br>สะพานแก้ว · ลิฟต์ไป่หลง</p>
+                  <span class="book-foot"><span class="aff-note">QR เข้างานทันที</span><span class="book-go">จองเลย ↗</span></span>
+                </a>
+                <a class="book-card" id="bkKkday" target="_blank" rel="noopener sponsored">
+                  <span class="book-top"><span class="book-ic">🎭</span><b>ทัวร์ & กิจกรรม</b><span class="partner kkday">KKday</span></span>
+                  <p>เดย์ทัวร์ไกด์ท้องถิ่น · โชว์จิ้งจอกเหมยลี่<br>ชุดฮั่นฝูถ่ายรูป</p>
+                  <span class="book-foot"><span class="aff-note">รีวิวคนไทยเพียบ</span><span class="book-go">จองเลย ↗</span></span>
+                </a>
+              </div>
+            </div>
+
+            <div class="ph-hero-section" id="phDocsBlock">
+              <div class="itin-head" style="margin:2px 2px 0">
+                <h3>📎 เอกสารประจำทริป · <em>ตั๋วเครื่องบิน พาสปอร์ต ประกันเดินทาง ฯลฯ</em></h3>
+                <button class="btn-ghost" id="tripDocAddBtn" style="padding:5px 12px;font-size:.7rem">＋ แนบไฟล์</button>
+              </div>
+              <input type="file" id="tripDocInput" accept="image/*,.pdf" multiple hidden>
+              <div class="doc-list" id="tripDocList"></div>
+              <div class="sub2" style="margin:4px 2px 0">รองรับรูปภาพ/PDF สูงสุด 5MB ต่อไฟล์ — แนบได้หลายไฟล์ · เก็บไว้ในเครื่องนี้เท่านั้น</div>
+            </div>
           </div>
-        </div>
-        <div class="timeline" id="planTimeline"></div>
-        <button class="add-stop" id="planAddStopBtn">＋ เพิ่มจุดหมายในวันนี้</button>
 
-        <div class="itin-head" style="margin-top:20px">
-          <h3>💡 ไอเดียที่ยังไม่จัดวัน</h3>
-          <span class="sub num" id="backlogMeta"></span>
+          <aside class="ph-side" aria-label="คลังสถานที่">
+            <button type="button" class="ph-map-link" id="phMapLink">🗺️ ดูแผนที่เต็มจอ<small>ยังไม่ผูกกับไทม์ไลน์</small></button>
+            <h3>🔍 คลังสถานที่</h3>
+            <div class="sub2">เลือกสถานที่ที่สนใจ กด "เพิ่มเข้าไอเดีย" แล้วลากไปจัดวันในไทม์ไลน์ซ้ายมือได้เลย</div>
+            <div class="trip-form-row" style="margin-top:10px">
+              <label style="flex-basis:100%">เมือง
+                <select id="discoveryCity" class="tf-text">
+                  <option value="changsha">ฉางซา</option>
+                  <option value="zhangjiajie">จางเจียเจี้ย</option>
+                  <option value="beijing">ปักกิ่ง</option>
+                  <option value="tianjin" disabled>เทียนจิน (เร็วๆ นี้)</option>
+                  <option value="chengdu" disabled>เฉิงตู (เร็วๆ นี้)</option>
+                </select>
+              </label>
+            </div>
+            <input id="discoverySearch" type="search" class="tf-text" placeholder="ค้นหาชื่อสถานที่…" style="margin:8px 0">
+            <div class="ph-cats" id="discoveryCats">
+              <button class="cat-chip active" data-cat="all">ทั้งหมด</button>
+              <button class="cat-chip" data-cat="spot">ที่เที่ยว</button>
+              <button class="cat-chip" data-cat="food">อาหาร</button>
+              <button class="cat-chip" data-cat="move-เดินทาง">เดินทาง</button>
+              <button class="cat-chip" data-cat="move-ที่พัก">ที่พัก</button>
+            </div>
+            <div id="discoveryList" style="padding-bottom:18px"></div>
+          </aside>
         </div>
-        <div class="timeline" id="backlogTimeline"></div>
-        <button class="add-stop" id="planAddIdeaBtn">＋ เพิ่มไอเดียใหม่</button>
       </section>
 
     </div>
   </main>
+
+  <!-- ===================== ลิ้นชักเครื่องมือรอง (Planning hero) =====================
+       reparent .view ที่มีอยู่แล้ว (view-ready/view-journal/view-sos) หรือ block ธรรมดา
+       (phDocsBlock/phBookingBlock) เข้ามาโชว์ตรงนี้ชั่วคราว แล้วย้ายกลับที่เดิมตอนปิด —
+       ไม่ clone/สร้าง DOM ซ้ำ เพื่อไม่ให้ id ชนกันและ render function เดิมยังทำงานได้ปกติ -->
+  <aside class="ph-drawer" id="phDrawer" aria-hidden="true">
+    <div class="ph-drawer-head">
+      <h3 id="phDrawerTitle"></h3>
+      <button class="icon-btn" id="phDrawerClose" aria-label="ปิด">✕</button>
+    </div>
+    <div class="ph-drawer-slot" id="phDrawerSlot"></div>
+  </aside>
 
   <!-- ===================== RIGHT DOCK ===================== -->
   <aside class="dock" id="dock" aria-label="ผู้ช่วยและเครื่องมือด่วน">
@@ -1500,35 +1713,6 @@
     </div>
   </div>
 
-  <div class="picker" id="discoveryModal" role="dialog" aria-label="คลังสถานที่">
-    <div class="picker-panel">
-      <div class="discovery-head">
-        <h3>🔍 คลังสถานที่</h3>
-        <button class="btn-ghost" id="discoveryClose" aria-label="ปิดคลังสถานที่" style="padding:4px 10px;flex:none">✕ ปิด</button>
-      </div>
-      <div class="sub2">เลือกสถานที่ที่สนใจ กด "เพิ่มเข้าไอเดีย" แล้วค่อยลากไปจัดวันทีหลังในโต๊ะวางแผนได้เลย</div>
-      <div class="trip-form-row" style="margin-top:10px">
-        <label style="flex-basis:100%">เมือง
-          <select id="discoveryCity" class="tf-text">
-            <option value="changsha">ฉางซา</option>
-            <option value="zhangjiajie">จางเจียเจี้ย</option>
-            <option value="beijing">ปักกิ่ง</option>
-            <option value="tianjin" disabled>เทียนจิน (เร็วๆ นี้)</option>
-            <option value="chengdu" disabled>เฉิงตู (เร็วๆ นี้)</option>
-          </select>
-        </label>
-      </div>
-      <input id="discoverySearch" type="search" class="tf-text" placeholder="ค้นหาชื่อสถานที่…" style="margin:8px 0">
-      <div class="ph-cats" id="discoveryCats">
-        <button class="cat-chip active" data-cat="all">ทั้งหมด</button>
-        <button class="cat-chip" data-cat="spot">ที่เที่ยว</button>
-        <button class="cat-chip" data-cat="food">อาหาร</button>
-        <button class="cat-chip" data-cat="move-เดินทาง">เดินทาง</button>
-        <button class="cat-chip" data-cat="move-ที่พัก">ที่พัก</button>
-      </div>
-      <div id="discoveryList"></div>
-    </div>
-  </div>
 
   <div class="picker" id="importModal" role="dialog" aria-label="นำเข้าแผนทริปจากไฟล์">
     <div class="picker-panel" style="width:min(660px,100%)">
