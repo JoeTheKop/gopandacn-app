@@ -6,10 +6,7 @@ import {$,$$,esc,fmtBytes} from "./utils.js";
 import {activeTrip} from "./state.js";
 import {places,openDriverCard} from "./driver.js";
 import {pinData,cityCenters,amapNavUrl,discoveryCityAgg,discoveryPlaceProto,
-  ROAD_THEME_KEY,roadThemes,CITY_TILE_KEY,CITY_TILE_LAYER_IDS,MAP_COLORS,
-  REGION_FOR_CITY_KEY,REGIONAL_TILE_LABELS} from "./map-data.js";
-import {DISCOVERY} from "./discovery-data.js";
-import {DISCOVERY_GPS} from "./discovery-gps.js";
+  ROAD_THEME_KEY,roadThemes,CITY_TILE_KEY,CITY_TILE_LAYER_IDS} from "./map-data.js";
 
 /* ---- map pins ---- */
 var curPinId="ifs";
@@ -47,105 +44,11 @@ var pmProtocol=new pmtiles.Protocol();
 maplibregl.addProtocol("pmtiles",pmProtocol.tile);
 var gpMap=new maplibregl.Map({
   container:"mapCanvas",style:"map-style.json",
-  center:[pinData.ifs.lng,pinData.ifs.lat],zoom:11.5,maxZoom:15,
+  center:[pinData.ifs.lng,pinData.ifs.lat],zoom:11.5,maxZoom:17,
   attributionControl:{compact:true,customAttribution:"© OpenStreetMap contributors"}
 });
 /** @type {any} */ (window).gpMap=gpMap; // เปิดให้ debug ผ่าน console ได้ (ไม่กระทบ UX)
 gpMap.on("error",function(e){console.warn("MapLibre error:",e && e.error && e.error.message,e)});
-/* ---- บั๊กที่เจอ 2026-08-06 (ป๋าโจรายงานว่าสลับเมืองในดรอปดาวน์ "ดูแผนที่เมืองอื่น" แล้วไม่ขึ้นจริง
-   ค้างที่เมืองเดิมตลอด) — สาเหตุ: loadCityTiles() เดิมเช็ค gpMap.isStyleLoaded() ทุกครั้งที่เรียก
-   ถ้า false จะรอ gpMap.once("load",apply) แต่ "load" เป็น event ที่ยิงแค่ครั้งเดียวตลอดอายุ instance
-   ถ้าผู้ใช้สลับเมือง "ก่อน" load ครั้งแรกจะยิง (ช่วง ~2 วินาทีแรกหลังเปิดแอป — นานขึ้นกว่าเดิมเพราะวันนี้
-   เพิ่ม source ถนน/น้ำระดับภูมิภาค 2 ไฟล์ ~42MB เข้าไปด้วย ทำให้ isStyleLoaded() เป็น false นานขึ้น)
-   listener ที่ลงทะเบียนตอนนั้นจะไม่มีวันถูกเรียกอีกเลย เพราะ "load" ยิงไปแล้วรอบเดียวก่อนหน้านั้น —
-   สลับเมืองพังถาวรตลอด session นั้น ทางแก้: ใช้ flag ค้างค่า (ไม่ผันผวนเหมือน isStyleLoaded()) แทน ---- */
-var mapReady=false;
-gpMap.once("load",function(){mapReady=true});
-/* ---- ทับสีพื้นหลัง (bg/country/province) ที่ map-style.json เขียนไว้ตายตัว ด้วยค่าจาก
-   MAP_COLORS.background (js/map-data.js) ทันทีหลังโหลด style — map-style.json เก็บค่าตั้งต้นไว้แค่
-   กันจอขาวโล่งช่วงสั้นๆ ก่อน JS รัน ไม่ใช่แหล่งจริงอีกต่อไป (ARCHITECTURE-ROADMAP.md § 4.5 ข้อ 5) ---- */
-gpMap.on("load",function(){
-  var B=MAP_COLORS.background;
-  gpMap.setPaintProperty("bg","background-color",B.bg);
-  gpMap.setPaintProperty("country-fill","fill-color",B.countryFill);
-  gpMap.setPaintProperty("province-line","line-color",B.provinceLine);
-  gpMap.setPaintProperty("country-line","line-color",B.countryLine);
-  gpMap.setPaintProperty("china-lakes-fill","fill-color",B.lakeFill);
-  gpMap.setPaintProperty("china-lakes-outline","line-color",B.lakeOutline);
-  gpMap.setPaintProperty("china-rivers-line","line-color",B.riverLine);
-  gpMap.setPaintProperty("china-roads-regional-line","line-color",B.regionalRoadLine);
-  gpMap.setPaintProperty("china-railroads-line","line-color",B.railroadLine);
-  gpMap.setPaintProperty("china-towns-point","circle-color",B.townPoint);
-  gpMap.setPaintProperty("china-towns-label","text-color",B.townLabel);
-  gpMap.setPaintProperty("province-label","text-color",B.provinceLabel);
-});
-/* ---- โครงข่ายถนน/น้ำจริงระดับภูมิภาค (2026-08-06, Level 4 ต่อจาก Level 1-3 ที่ยังไม่พอ) —
-   ป๋าโจดาวน์โหลด .osm.pbf จริงผ่าน Protomaps "OSM by the slice" ครอบ 2 โซนทริป (หูหนาน,
-   ปักกิ่ง-เทียนจิน-ฉงลี่) แทนข้อมูลสรุป Natural Earth ที่ใช้ใน Level 1-3 — ประมวลผลผ่าน
-   poc/tools/add_city.py เหมือนเมืองทริปทั่วไป แต่จำกัด --max-zoom 11 (ไม่ต้องละเอียดถึง z16
-   ทั่วทั้งภูมิภาค กันไฟล์ใหญ่เกิน + กันสร้างซ้ำพื้นที่ที่มี city tile ละเอียดอยู่แล้ว เช่นตัวเมืองปักกิ่ง)
-   เป็น source แบบ "อยู่ถาวร" ต่างจาก citytiles ที่สลับตามเมืองที่เลือก — เพิ่มก่อน city-label
-   ในโค้ดเพื่อให้ citytiles (ที่ addCityTileLayers เพิ่มทีหลังผ่าน loadCityTiles) วาดทับข้างบนเสมอ
-   ตอนซูมเข้าเมืองที่มี tile ละเอียด — ยังคงเลเยอร์ Natural Earth (rivers/roads-regional/railroads/
-   towns) ไว้ด้วยเพราะครอบพื้นที่กว้างกว่ามาก (ทั้งประเทศ) ส่วนนี้ครอบแค่ 2 โซนทริปเท่านั้น ---- */
-var REGIONAL_TILE_SETS=Object.keys(REGIONAL_TILE_LABELS);
-gpMap.on("load",function(){
-  var C=MAP_COLORS.city;
-  REGIONAL_TILE_SETS.forEach(function(key){
-    var srcId="regional-"+key;
-    gpMap.addSource(srcId,{type:"vector",url:"pmtiles://tiles/"+key+".pmtiles",
-      minzoom:6,maxzoom:11,attribution:"© OpenStreetMap contributors"});
-    /* ---- บั๊กที่เจอ 2026-08-06 (ป๋าโจเห็น "เศษแก้วสีฟ้า" กระจายทั่วปักกิ่ง แม้แก้เรื่องบ่อเล็กไปแล้ว) —
-       source-layer "water" มีทั้ง class:"water-area" (Polygon, บึง/สระ/แม่น้ำกว้าง) และ
-       class:"waterway" (LineString, ลำธาร/คลอง) ปนกัน เดิม layer นี้เป็น type:"fill" ไม่ได้กรอง class
-       เลย — MapLibre เอา LineString ไปเรนเดอร์เป็นรูปเศษสามเหลี่ยม/ลิ่มด้วย (ไม่ได้ถูก ignore เหมือนที่
-       ควรจะเป็น) ต้องกรองเอาเฉพาะ Polygon (water-area) เข้า fill แล้วแยก waterway ไปเป็นเส้นบางแทน
-       (เหมือน pattern water/water-line ของ city tile ที่ addCityTileLayers ใช้อยู่แล้ว) ---- */
-    gpMap.addLayer({id:srcId+"-water",type:"fill",source:srcId,"source-layer":"water",
-      filter:["==",["get","class"],"water-area"],
-      paint:{"fill-color":C.water,"fill-outline-color":C.waterOutline}});
-    gpMap.addLayer({id:srcId+"-water-line",type:"line",source:srcId,"source-layer":"water",
-      filter:["==",["get","class"],"waterway"],
-      paint:{"line-color":C.waterOutline,
-        "line-width":["interpolate",["linear"],["zoom"],6,0.4,11,1]}});
-    gpMap.addLayer({id:srcId+"-roads-casing",type:"line",source:srcId,"source-layer":"roads",
-      layout:{"line-join":"round"},paint:{
-      "line-color":["match",["get","class"],
-        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],C.roadCasingMajor,
-        ["secondary","secondary_link","tertiary","tertiary_link"],C.roadCasingMid,C.roadCasingMinor],
-      // width ต่ำสุดยกจาก 0.6 เป็น 1.2 (2026-08-06) — เดิมที่ z6-7 บางจนแทบมองไม่เห็นเลย
-      // (เจอตอนป๋าโจบอกว่า "ยังไม่เห็นรายละเอียด" ทั้งที่ feature count จริงมีอยู่ ปัญหาคือมองไม่เห็น)
-      "line-width":["interpolate",["linear"],["zoom"],
-        6,1.2,11,["match",["get","class"],["motorway","trunk","primary"],2.4,1.4]]}});
-    gpMap.addLayer({id:srcId+"-roads-line",type:"line",source:srcId,"source-layer":"roads",
-      layout:{"line-join":"round"},paint:{
-      "line-color":["match",["get","class"],
-        ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],C.roadLineMajor,
-        ["secondary","secondary_link","tertiary","tertiary_link"],C.roadLineMid,C.roadLineMinor],
-      "line-width":["interpolate",["linear"],["zoom"],
-        6,0.6,11,["match",["get","class"],["motorway","trunk","primary"],1.3,0.8]]}});
-  });
-});
-/* ---- ป้ายชื่อ 7 เมืองทริป (Level 2, ป๋าโจขอ 2026-08-06) — สร้าง source+layer แบบ dynamic ตรงนี้
-   เพราะข้อมูลมาจาก cityCenters (js/map-data.js) ที่มีอยู่แล้ว ไม่ต้องหาไฟล์ geojson ใหม่ ตัด
-   "ประเทศจีน" ออกเพราะเป็นจุดกึ่งกลางรวม ไม่ใช่เมืองจริง
-   ใช้ชื่ออังกฤษ (capitalize CITY_TILE_KEY) แทนชื่อไทยจาก cityCenters — ฟอนต์ glyph ที่ vendor ไว้
-   (fonts/Noto Sans SC/) มีแค่ Latin 0-255 + ช่วง CJK เท่านั้น ไม่มี Thai block (U+0E00-0E7F) เลย
-   ถ้าใช้ชื่อไทยตรงๆ จะไม่มี glyph ให้เรนเดอร์ กลายเป็นป้ายว่างเปล่า (เจอระหว่างตรวจก่อน commit) ---- */
-gpMap.on("load",function(){
-  var cityFeatures=Object.keys(cityCenters).filter(function(name){return name!=="ประเทศจีน"}).map(function(name){
-    var c=cityCenters[name];
-    var key=CITY_TILE_KEY[name]||name;
-    var enName=key.charAt(0).toUpperCase()+key.slice(1);
-    return {type:"Feature",properties:{name:enName},geometry:{type:"Point",coordinates:[c.lng,c.lat]}};
-  });
-  gpMap.addSource("city-labels",{type:"geojson",data:{type:"FeatureCollection",features:cityFeatures}});
-  gpMap.addLayer({id:"city-label",type:"symbol",source:"city-labels",minzoom:3,maxzoom:11,
-    layout:{"text-field":["get","name"],"text-font":["Noto Sans SC"],
-      "text-size":["interpolate",["linear"],["zoom"],3,10,7,13,10,15],
-      "text-offset":[0,0.8],"text-anchor":"top"},
-    paint:{"text-color":MAP_COLORS.background.cityLabel,"text-halo-color":"#f7f8f7","text-halo-width":1.4}});
-});
 gpMap.on("load",function(){
   Object.keys(pinData).forEach(function(id){
     var d=pinData[id];
@@ -181,52 +84,8 @@ function clearDiscoveryPlacePins(){
   Object.keys(discoveryPlaceMarkers).forEach(function(k){discoveryPlaceMarkers[k].remove()});
   discoveryPlaceMarkers={};
 }
-/* ---- หมุดคลังสถานที่จริง (feature 2026-08-07: ผสาน DISCOVERY_GPS เข้าแผนที่เต็มจอ) ----
-   join DISCOVERY (ข้อความ) กับ DISCOVERY_GPS (พิกัด) ด้วย candidate_key ตอน render เท่านั้น ไม่เก็บ
-   ซ้ำไว้ที่ไหน — คืน null ถ้าเมืองนี้ยังไม่มีไฟล์ GPS เลย (ให้ fallback ไป discoveryPlaceProto ถ้ามี)
-   คืน array (อาจว่างเปล่า) ถ้ามีไฟล์ GPS แล้วแต่ยังไม่มี candidate ไหน resolved เลย — เฉพาะ
-   confidence high/medium เท่านั้นที่มี lat/lng จริงตาม DISCOVERY_GPS (ดูเกณฑ์ใน js/discovery-gps.js) */
-function realDiscoveryPlaces(cityName){
-  var cityKey=CITY_TILE_KEY[cityName];
-  var cards=cityKey&&DISCOVERY[cityKey];
-  var gps=cityKey&&DISCOVERY_GPS[cityKey];
-  if(!cards||!gps)return null;
-  var out=[];
-  cards.forEach(function(c){
-    var g=gps[c.id];
-    if(g&&g.lat!=null)out.push({id:c.id,name_th:c.name_th,pitch:c.pitch,cat:c.cat,lng:g.lng,lat:g.lat,
-      confidence:g.confidence,uncertainty:g.uncertainty});
-  });
-  return out;
-}
 function addDiscoveryPlacePins(cityName){
   clearDiscoveryPlacePins();
-  var real=realDiscoveryPlaces(cityName);
-  if(real){
-    real.forEach(function(p,i){
-      var icon=p.cat&&p.cat[0]==="food"?"🍜":(p.cat&&p.cat[0]==="move"?"🚉":"📍");
-      var el=document.createElement("div");
-      el.className="gp-pin gp-pin-discovery";
-      el.innerHTML='<svg viewBox="0 0 22 30" xmlns="http://www.w3.org/2000/svg"><path d="M11 0C5 0 0 5 0 11c0 8 11 19 11 19s11-11 11-19C22 5 17 0 11 0z" fill="#f59e0b" stroke="#78350f" stroke-width="1"/><circle cx="11" cy="11" r="8" fill="#0f172a"/><text x="11" y="11.5" text-anchor="middle" dominant-baseline="central" font-size="10">'+icon+'</text></svg>';
-      el.setAttribute("role","button");el.setAttribute("tabindex","0");
-      el.setAttribute("aria-label","สถานที่: "+p.name_th);
-      function openRealPop(){
-        $("#popTitle").innerHTML='<span>'+icon+'</span>'+esc(p.name_th)+
-          (p.confidence==="medium"?' <span class="tag" style="margin-left:6px">พิกัดคร่าวๆ</span>':"");
-        var desc=p.pitch+" — หมุดตำแหน่งวางแผนคร่าวๆ จาก OpenStreetMap ไม่ใช่พิกัดทางเข้าหรือการรับประกันนำทางอย่างเป็นทางการ © OpenStreetMap contributors";
-        // confidence:"medium" ต้องโชว์ uncertainty เพิ่ม ตามคำขอ WIKI (zhangjiajie-gps-supplement-handoff-v1.0.json)
-        if(p.confidence==="medium"&&p.uncertainty)desc+=" ⚠️ "+p.uncertainty;
-        $("#popDesc").textContent=desc;
-        $("#amapNav").href=amapNavUrl({lng:p.lng,lat:p.lat,title:p.name_th});
-        $("#pinPop .row").style.display="";
-        $("#pinPop").classList.add("show");
-      }
-      el.addEventListener("click",openRealPop);
-      el.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openRealPop()}});
-      discoveryPlaceMarkers["r"+i]=new maplibregl.Marker({element:el}).setLngLat([p.lng,p.lat]).addTo(gpMap);
-    });
-    return;
-  }
   var places=discoveryPlaceProto[cityName];
   if(!places)return;
   places.forEach(function(p,i){
@@ -297,35 +156,34 @@ gpMap.on("load",function(){
    ดู ARCHITECTURE-ROADMAP.md § 3.2 ---- */
 var currentTileCity=null;
 function addCityTileLayers(){
-  // minzoom:6 — ทุกเมืองมี tile จริงตั้งแต่ z6 แล้ว (progressive zoom ครบทั้ง 7 เมือง 2026-08-05,
-  // ดู ARCHITECTURE-ROADMAP.md § 4.5 ข้อ 4) ก่อนหน้านี้มีแค่ฉางซา/จางเจียเจี้ยที่ rebuild แล้ว
-  // (task #8, 2026-08-04) ส่วนที่เหลือ (ปักกิ่ง/เทียนจิน/ฉงลี่/เฟิ่งหวง/ฝูหรง) มีแค่ z11-16 — ตอนนี้ปิดช่องว่างแล้ว
+  // minzoom:6 — เผื่อไว้สำหรับเมืองที่ rebuild ด้วย progressive zoom แล้ว (ฉางซา/จางเจียเจี้ย, task #8
+  // ต่อ 2026-08-04) เมืองที่ยังไม่ได้ rebuild (ปักกิ่ง/เทียนจิน/ฉงลี่/เฟิ่งหวง/ฝูหรง) ไฟล์ยังมีแค่ z11-16
+  // เหมือนเดิม — ขอ tile ต่ำกว่า 11 ของเมืองพวกนั้นจะได้แค่ tile ว่างเปล่า ไม่ error
   gpMap.addSource("citytiles",{type:"vector",url:"pmtiles://tiles/"+currentTileCity+".pmtiles",
     minzoom:6,maxzoom:16,attribution:"© OpenStreetMap contributors"});
-  // สีชุดนี้อ่านจาก MAP_COLORS.city (js/map-data.js) แหล่งเดียว — ตามที่วางแผนไว้ใน
-  // ARCHITECTURE-ROADMAP.md § 4.5 ข้อ 5 (เดิมสีฝังตรงนี้ตายตัว) ไม่ได้แตะ roadThemes toggle
+  // สีชุดนี้เป็น Direction C light theme experiment (2026-08-04, ป๋าโจขอ "ลองบนพื้นขาว") — ของเดิม
+  // (น้ำ/อาคาร/ถนนเข้มบนพื้นเข้ม) ดู git history ถ้าต้องย้อนกลับ ไม่ได้แตะ roadThemes toggle
   // (ใน map-data.js) เพราะเป็นฟีเจอร์สลับสีถนนแยกต่างหากที่ยังออกแบบมาสำหรับพื้นเข้ม
-  var C=MAP_COLORS.city;
   gpMap.addLayer({id:"water",type:"fill",source:"citytiles","source-layer":"water",
-    paint:{"fill-color":C.water,"fill-outline-color":C.waterOutline}});
+    paint:{"fill-color":"#c3dce8","fill-outline-color":"#7fa8c2"}});
   gpMap.addLayer({id:"water-line",type:"line",source:"citytiles","source-layer":"water",
-    paint:{"line-color":C.waterOutline,"line-width":["interpolate",["linear"],["zoom"],11,0.8,16,3]}});
+    paint:{"line-color":"#7fa8c2","line-width":["interpolate",["linear"],["zoom"],11,0.8,16,3]}});
   gpMap.addLayer({id:"landuse-park",type:"fill",source:"citytiles","source-layer":"landuse",
-    paint:{"fill-color":C.landusePark,"fill-opacity":0.85}});
+    paint:{"fill-color":"#cfe3d4","fill-opacity":0.85}});
   gpMap.addLayer({id:"buildings",type:"fill",source:"citytiles","source-layer":"buildings",minzoom:14,
-    paint:{"fill-color":C.buildingFill,"fill-outline-color":C.buildingOutline,
+    paint:{"fill-color":"#d8dde5","fill-outline-color":"#aab3c2",
       "fill-opacity":["interpolate",["linear"],["zoom"],14,0.65,16,0.95]}});
   gpMap.addLayer({id:"roads-casing",type:"line",source:"citytiles","source-layer":"roads",paint:{
     "line-color":["match",["get","class"],
-      ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],C.roadCasingMajor,
-      ["secondary","secondary_link","tertiary","tertiary_link"],C.roadCasingMid,C.roadCasingMinor],
+      ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#5b6b7a",
+      ["secondary","secondary_link","tertiary","tertiary_link"],"#8290a0","#a3aebb"],
     "line-width":["interpolate",["linear"],["zoom"],
       11,["match",["get","class"],["motorway","trunk","primary"],2,1],
       16,["match",["get","class"],["motorway","trunk","primary"],10,["secondary","tertiary"],7,4]]}});
   gpMap.addLayer({id:"roads-line",type:"line",source:"citytiles","source-layer":"roads",paint:{
     "line-color":["match",["get","class"],
-      ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],C.roadLineMajor,
-      ["secondary","secondary_link","tertiary","tertiary_link"],C.roadLineMid,C.roadLineMinor],
+      ["motorway","motorway_link","trunk","trunk_link","primary","primary_link"],"#ffffff",
+      ["secondary","secondary_link","tertiary","tertiary_link"],"#f2f4f7","#e8ecf0"],
     "line-width":["interpolate",["linear"],["zoom"],
       11,["match",["get","class"],["motorway","trunk","primary"],0.8,0.4],
       16,["match",["get","class"],["motorway","trunk","primary"],5,["secondary","tertiary"],3,1.5]]}});
@@ -333,7 +191,7 @@ function addCityTileLayers(){
     filter:["has","name"],
     layout:{"symbol-placement":"line","text-field":["get","name"],"text-font":["Noto Sans SC"],
       "text-size":["interpolate",["linear"],["zoom"],14,10,18,13]},
-    paint:{"text-color":C.roadLabelText,"text-halo-color":C.roadLabelHalo,"text-halo-width":1.4}});
+    paint:{"text-color":"#33414d","text-halo-color":"#f7f8f7","text-halo-width":1.4}});
 }
 function loadCityTiles(cityTh){
   var key=CITY_TILE_KEY[cityTh]||null;
@@ -344,7 +202,7 @@ function loadCityTiles(cityTh){
     currentTileCity=key;
     if(key)addCityTileLayers();
   }
-  if(mapReady)apply();else gpMap.once("load",function(){mapReady=true;apply()});
+  if(gpMap.isStyleLoaded())apply();else gpMap.once("load",apply);
 }
 
 /* ---- ดาวน์โหลดแผนที่ออฟไลน์ของทริปนี้ล่วงหน้า (feature: แทนที่การ precache รวมทุกเมืองแบบเดิม
@@ -357,22 +215,9 @@ function tripTileCities(){
   return (activeTrip.cities||[]).map(function(c){return {th:c,key:CITY_TILE_KEY[c]}})
     .filter(function(x){return x.key&&!seen[x.key]&&(seen[x.key]=1)});
 }
-/* ---- รวมรายการเมือง + ไฟล์ภูมิภาคที่เกี่ยวข้องเข้าด้วยกัน (2026-08-06, ป๋าโจขอเป็นมาตรฐาน:
-   ปุ่ม "ดาวน์โหลดแผนที่ทริปนี้" ต้องโหลดพื้นหลังถนน/น้ำจริงระดับภูมิภาคมาด้วยเสมอ ไม่ใช่แค่ตัวเมือง
-   เพื่อไม่ให้ต้องพึ่งเน็ตหน้างานตอนเลื่อนแผนที่ออกนอกตัวเมือง) — ใช้ REGION_FOR_CITY_KEY หาโซนที่
-   เกี่ยวข้องจากเมืองในทริป กันไฟล์ภูมิภาคซ้ำถ้าทริปมีหลายเมืองในโซนเดียวกัน (เช่นฉางซา+จางเจียเจี้ย
-   ทั้งคู่ต้องการ hunan-trip-region ไฟล์เดียว) ---- */
-function tripDownloadItems(){
-  var cities=tripTileCities();
-  var seenRegion={};
-  var regions=cities.map(function(c){return REGION_FOR_CITY_KEY[c.key]})
-    .filter(function(r){return r&&!seenRegion[r]&&(seenRegion[r]=1)})
-    .map(function(r){return {th:REGIONAL_TILE_LABELS[r],key:r}});
-  return cities.concat(regions);
-}
 function downloadTripTiles(){
   var mapBtn=$("#mapDownloadTiles"),readyBtn=$("#tileReadyDownloadBtn");
-  var cities=tripDownloadItems().map(function(x){return x.key});
+  var cities=tripTileCities().map(function(x){return x.key});
   if(!cities.length){
     mapBtn.textContent="∅";setTimeout(refreshMapDownloadBtn,1500);
     return;
@@ -406,7 +251,7 @@ $("#tileReadyDownloadBtn").addEventListener("click",downloadTripTiles);
    ตอนนี้เช็คสถานะจริงจาก TILE_CACHE ทุกครั้งที่โหลดทริป/สลับทริป/เปิดหน้าเช็กลิสต์ก่อนบิน
    ดู ARCHITECTURE-ROADMAP.md § 3.4 ---- */
 function tileReadinessStatus(){
-  var cities=tripDownloadItems();
+  var cities=tripTileCities();
   if(!cities.length)return Promise.resolve([]);
   return caches.open(TILE_CACHE_NAME).then(function(cache){
     return Promise.all(cities.map(function(c){
@@ -460,7 +305,7 @@ export function flyToCity(name){
     // สลับหมุดรวมเมือง (คลังสถานที่ ทดลอง) ↔ หมุดสถานที่รายจุด — ดู addDiscoveryAggPins/addDiscoveryPlacePins
     // ป้องกันกรณี flyToCity ถูกเรียกตอน init ก่อน gpMap "load" event ยิง (หมุดรวมยังไม่ถูกสร้าง)
     Object.keys(discoveryAggMarkers).forEach(function(k){discoveryAggMarkers[k].getElement().style.display=""});
-    if(discoveryPlaceProto[name]||realDiscoveryPlaces(name)){
+    if(discoveryPlaceProto[name]){
       if(discoveryAggMarkers[name])discoveryAggMarkers[name].getElement().style.display="none";
       addDiscoveryPlacePins(name);
     }else clearDiscoveryPlacePins();

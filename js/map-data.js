@@ -79,22 +79,27 @@ export function amapNavUrl(d){
   return "https://uri.amap.com/navigation?to="+gcj[0].toFixed(6)+","+gcj[1].toFixed(6)+","+encodeURIComponent(d.title)+
     "&mode=car&policy=1&src=gopandacn&coordinate=gaode&callnative=1";
 }
-/* ---- หมุดรวมคลังสถานที่ตอนซูมออกกว้าง (ตัวเลขจาก DISCOVERY ใน discovery-data.js) ----
-   อัปเดต 2026-08-07: ฉางซา/จางเจียเจี้ย/เฟิ่งหวง/ฝูหรง มีพิกัดจริงจาก China Travel WIKI ครบ 4 เมืองแล้ว
-   (ดู js/discovery-gps.js) — ปักกิ่งยังไม่มี ใช้ discoveryPlaceProto (ค่าโดยประมาณ "ทดลอง") ต่อไปก่อน
-   จนกว่าจะมีชุดข้อมูลยืนยันจากกุ๊กไก่/China Travel WIKI เหมือนที่ผ่านมา ---- */
+/* ---- Prototype: หมุดคลังสถานที่แบบทดลอง (task #8, 2026-08-04, ดู project_gopandacn_ux_redesign.md)
+   พิกัดสถานที่ (discoveryPlaceProto) เป็นค่า "โดยประมาณ" จากความรู้ทั่วไป ไม่ได้ยืนยันจาก Overpass
+   เหมือนชุด pinData เดิม — ใช้ทดสอบ pattern ปักหมุดระดับประเทศ→เมืองเท่านั้น ห้ามเอาไปอ้างอิงพิกัดจริง
+   จนกว่าจะมีชุดข้อมูลยืนยันจากกุ๊กไก่/China Travel WIKI พิกัดเมือง (จุดกึ่งกลาง) ใช้ cityCenters ที่ยืนยัน
+   แล้วตรงๆ ---- */
 export var discoveryCityAgg={
   "ฉางซา":{count:38,lng:cityCenters["ฉางซา"].lng,lat:cityCenters["ฉางซา"].lat},
-  "จางเจียเจี้ย":{count:35,lng:cityCenters["จางเจียเจี้ย"].lng,lat:cityCenters["จางเจียเจี้ย"].lat},
-  "เฟิ่งหวง":{count:19,lng:cityCenters["เฟิ่งหวง"].lng,lat:cityCenters["เฟิ่งหวง"].lat},
-  "ฝูหรง":{count:12,lng:cityCenters["ฝูหรง"].lng,lat:cityCenters["ฝูหรง"].lat},
+  "จางเจียเจี้ย":{count:26,lng:cityCenters["จางเจียเจี้ย"].lng,lat:cityCenters["จางเจียเจี้ย"].lat},
   "ปักกิ่ง":{count:38,lng:cityCenters["ปักกิ่ง"].lng,lat:cityCenters["ปักกิ่ง"].lat}
 };
-/* ---- Prototype: หมุดคลังสถานที่แบบทดลอง (task #8, 2026-08-04, ดู project_gopandacn_ux_redesign.md)
-   เหลือเฉพาะปักกิ่งที่ยังไม่มีพิกัดจริง — ค่า "โดยประมาณ" จากความรู้ทั่วไป ไม่ได้ยืนยันจาก Overpass
-   ห้ามเอาไปอ้างอิงพิกัดจริง ต้องถอดออกทันทีเมื่อมีชุดข้อมูลยืนยันจากกุ๊กไก่/China Travel WIKI (ตกลงกับ
-   ป๋าโจไว้แบบนี้ 2026-08-07 — เหมือนที่เพิ่งทำกับฉางซา/จางเจียเจี้ยไปแล้ว) ---- */
 export var discoveryPlaceProto={
+  "ฉางซา":[
+    {ic:"🏛️",title:"พิพิธภัณฑ์หูหนาน",lng:112.9847,lat:28.1957},
+    {ic:"⛰️",title:"เขาเยว่ลู่",lng:112.9316,lat:28.1855},
+    {ic:"🍊",title:"เกาะส้ม",lng:112.9600,lat:28.1965}
+  ],
+  "จางเจียเจี้ย":[
+    {ic:"🌲",title:"อุทยานแห่งชาติป่าไม้จางเจียเจี้ย",lng:110.5645,lat:29.3467},
+    {ic:"⛰️",title:"เขาเทียนเหมินซาน",lng:110.4809,lat:29.0958},
+    {ic:"🌉",title:"สะพานกระจกแกรนด์แคนยอน",lng:110.4213,lat:29.4342}
+  ],
   "ปักกิ่ง":[
     {ic:"🏯",title:"พระราชวังต้องห้าม",lng:116.3972,lat:39.9163},
     {ic:"⛩️",title:"หอบูชาฟ้าเทียนถาน",lng:116.4066,lat:39.8822},
@@ -133,64 +138,4 @@ export var roadThemes=[
    สำหรับ addCityTileLayers()/loadCityTiles() ที่ใช้ค่าพวกนี้จริง ---- */
 export var CITY_TILE_KEY={"ฉางซา":"changsha","จางเจียเจี้ย":"zhangjiajie","เฟิ่งหวง":"fenghuang",
   "ฝูหรง":"furong","ฉงลี่":"chongli","ปักกิ่ง":"beijing","เทียนจิน":"tianjin"};
-// กลับด้าน CITY_TILE_KEY (feature 2026-08-07: ปุ่มขยายมินิแมปในแผงคลังสถานที่ต้องแปลง city key
-// อังกฤษของ DISCOVERY/DISCOVERY_GPS กลับเป็นชื่อไทยเพื่อเรียก flyToCity() ของแผนที่เต็มจอ)
-export var CITY_KEY_TO_TH=Object.keys(CITY_TILE_KEY).reduce(function(o,th){o[CITY_TILE_KEY[th]]=th;return o},{});
 export var CITY_TILE_LAYER_IDS=["water","water-line","landuse-park","buildings","roads-casing","roads-line","roads-label"];
-
-/* ---- โครงข่ายถนน/น้ำจริงระดับภูมิภาค (2026-08-06) — ครอบกลุ่มเมืองทริปเป็นโซน ไม่ใช่รายเมือง
-   ต่างจาก CITY_TILE_KEY จึงแยก mapping ไว้ต่างหาก ใช้ทั้งฝั่งวาดแผนที่ (js/map.js) และฝั่งปุ่ม
-   "ดาวน์โหลดแผนที่ทริปนี้" (โหลดไฟล์ภูมิภาคที่เกี่ยวข้องมาด้วยพร้อมเมืองในทริป — ป๋าโจขอให้เป็น
-   มาตรฐานตั้งแต่รอบนี้: โหลดทุกอย่างตอนมี WiFi ที่บ้าน ไม่พึ่งเน็ตหน้างาน) ---- */
-export var REGION_FOR_CITY_KEY={
-  changsha:"hunan-trip-region",zhangjiajie:"hunan-trip-region",
-  fenghuang:"hunan-trip-region",furong:"hunan-trip-region",
-  // เทียนจินแยกไฟล์ภูมิภาคของตัวเองแล้ว (2026-08-06) — กรอบ beijing-tianjin-chongli-region เดิม
-  // ป๋าโจวาดไว้ขอบล่างสุด lat 39.5 ซึ่งอยู่เหนือตัวเมืองเทียนจินจริง (lat ~39.14) ไปแล้ว ข้อมูลถนน/น้ำ
-  // รอบเทียนจินเลยว่างเปล่าไม่มีจริงในไฟล์เดิม (ไม่ใช่บั๊กโค้ด เป็นบั๊กกรอบที่ดาวน์โหลด) แก้โดยขอไฟล์ใหม่
-  // เฉพาะโซนเทียนจิน (bbox 116.6,38.7,117.9,39.5) แทนที่จะฝากรวมกับกรอบปักกิ่ง
-  beijing:"beijing-tianjin-chongli-region",tianjin:"tianjin-region",
-  chongli:"beijing-tianjin-chongli-region"
-};
-export var REGIONAL_TILE_LABELS={
-  "hunan-trip-region":"แผนที่เส้นทางหูหนาน (พื้นหลัง)",
-  "beijing-tianjin-chongli-region":"แผนที่เส้นทางปักกิ่ง-ฉงลี่ (พื้นหลัง)",
-  "tianjin-region":"แผนที่เส้นทางเทียนจิน (พื้นหลัง)"
-};
-
-/* ---- แหล่งสีเดียวของแผนที่ทั้งหมด (feature: ARCHITECTURE-ROADMAP.md § 4.5 ข้อ 5 — ก่อนหน้านี้สีกระจาย
-   อยู่ 2 จุดที่ต้องแก้พร้อมกันเวลาเปลี่ยนธีม: map-style.json (พื้นหลังประเทศ/มณฑล, static) และ
-   addCityTileLayers() ใน js/map.js (น้ำ/อาคาร/ถนนต่อเมือง) — ตอนนี้รวมมาไว้ที่เดียวที่นี่ map-style.json
-   ยังเก็บค่าตั้งต้นไว้เป็น fallback (กันแผนที่ขาวโล่งถ้า JS ยังโหลดไม่ทัน) แต่ gpMap.on("load") ใน map.js
-   จะ setPaintProperty ทับด้วยค่าจากที่นี่ทันทีเสมอ ที่นี่จึงเป็นแหล่งจริงที่ต้องแก้เวลาเปลี่ยนธีมสี ---- */
-export var MAP_COLORS={
-  background:{
-    bg:"#f7f8f7",
-    countryFill:"#e2e8e5",
-    provinceLine:"#8fa89f",
-    countryLine:"#4f7268",
-    // city-bounds-fill/city-bounds-line ถูกลบออกจาก map-style.json แล้ว (2026-08-05, § 4.5 ข้อ 4) —
-    // เคยเป็นกรอบ placeholder เติมช่องว่าง z10.5-11 ให้เมืองที่ยังไม่มี tile จริงต่ำกว่า z11
-    // ตอนนี้ทั้ง 7 เมืองมี progressive zoom ถึง z6 ครบแล้ว ไม่ต้องใช้กรอบคร่าวๆ อีก
-    // ทะเลสาบ/แม่น้ำระดับประเทศ (Natural Earth 1:50m, เพิ่ม 2026-08-06) — เติมพื้นที่ว่างเปล่าช่วง
-    // z6-11 ก่อนถึง city tile จริง ใช้สีเดียวกับ MAP_COLORS.city.water/waterOutline เพื่อให้กลืนกัน
-    // ตอนซูมเข้าเจอ city tile จริง (ดูคำขอป๋าโจ 2026-08-06: "เพิ่มลายแผนที่" ที่ z3/z6 + ไล่ให้กลมกลืนถึง z11)
-    lakeFill:"#c3dce8",lakeOutline:"#7fa8c2",riverLine:"#7fa8c2",
-    // ถนนสายหลักระดับภูมิภาค (Natural Earth 1:10m, clip เฉพาะโซนหูหนาน+ปักกิ่ง-เทียนจิน-ฉงลี่ 345KB)
-    // เพิ่ม 2026-08-06 เติมรายละเอียด z3-11 ก่อนถึง city tile จริง — ป๋าโจถามต่อจากรอบแม่น้ำ/ทะเลสาบ
-    regionalRoadLine:"#9aa8b3",
-    // Level 2/3 (2026-08-06, ป๋าโจขอสเกล "detail level" ชัดเจนแทนคำว่า "อีกนิด"): ป้ายชื่อมณฑล/เมือง
-    // + ทางรถไฟ/เมืองรองระดับภูมิภาค — cityLabel ใช้กับ layer ที่เพิ่มแบบ dynamic ใน js/map.js
-    // (ข้อมูลมาจาก cityCenters ไม่ใช่ static geojson) ส่วนที่เหลือ static อยู่ใน map-style.json แล้ว
-    railroadLine:"#b0abc4",townPoint:"#8a97a3",townLabel:"#6b7680",
-    provinceLabel:"#5c7268",cityLabel:"#33414d"
-  },
-  city:{
-    water:"#c3dce8",waterOutline:"#7fa8c2",
-    landusePark:"#cfe3d4",
-    buildingFill:"#d8dde5",buildingOutline:"#aab3c2",
-    roadCasingMajor:"#5b6b7a",roadCasingMid:"#8290a0",roadCasingMinor:"#a3aebb",
-    roadLineMajor:"#ffffff",roadLineMid:"#f2f4f7",roadLineMinor:"#e8ecf0",
-    roadLabelText:"#33414d",roadLabelHalo:"#f7f8f7"
-  }
-};
