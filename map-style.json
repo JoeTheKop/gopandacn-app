@@ -16,19 +16,30 @@
       "data": "map-data/china-provinces.geojson",
       "attribution": "© Natural Earth"
     },
-    "city-bounds": {
+    "china-lakes": {
       "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": [
-          { "type": "Feature", "properties": { "city": "ปักกิ่ง" }, "geometry": { "type": "Polygon", "coordinates": [[[116.1477768,39.7541407],[116.790149,39.7541407],[116.790149,40.0113548],[116.1477768,40.0113548],[116.1477768,39.7541407]]] } },
-          { "type": "Feature", "properties": { "city": "ฉงลี่" }, "geometry": { "type": "Polygon", "coordinates": [[[115.3630784,40.8533809],[115.4666885,40.8533809],[115.4666885,40.9913283],[115.3630784,40.9913283],[115.3630784,40.8533809]]] } },
-          { "type": "Feature", "properties": { "city": "เฟิ่งหวง" }, "geometry": { "type": "Polygon", "coordinates": [[[109.5687,27.918],[109.629,27.918],[109.629,27.9783],[109.5687,27.9783],[109.5687,27.918]]] } },
-          { "type": "Feature", "properties": { "city": "ฝูหรง" }, "geometry": { "type": "Polygon", "coordinates": [[[110.02,28.75],[110.081,28.75],[110.081,28.811],[110.02,28.811],[110.02,28.75]]] } },
-          { "type": "Feature", "properties": { "city": "เทียนจิน" }, "geometry": { "type": "Polygon", "coordinates": [[[116.8992966,39.0324533],[117.3325161,39.0324533],[117.3325161,39.7855639],[116.8992966,39.7855639],[116.8992966,39.0324533]]] } }
-        ]
-      },
-      "attribution": "GoPandaCN — ขอบเขตจริงจากไฟล์ pmtiles รายเมือง (อ่านจาก header ตรงๆ 2026-08-04) — ฉางซา/จางเจียเจี้ยถูกตัดออกแล้วเพราะ rebuild เป็น progressive zoom (z6-16 จริง) ไปแล้ว ไม่ต้องใช้กรอบคร่าวๆ อีก เหลือแค่ 5 เมืองที่ยังมีข้อมูลแค่ z11-16 เหมือนเดิม"
+      "data": "map-data/china-lakes.geojson",
+      "attribution": "© Natural Earth"
+    },
+    "china-rivers": {
+      "type": "geojson",
+      "data": "map-data/china-rivers.geojson",
+      "attribution": "© Natural Earth"
+    },
+    "china-roads-regional": {
+      "type": "geojson",
+      "data": "map-data/china-roads-regional.geojson",
+      "attribution": "© Natural Earth"
+    },
+    "china-railroads-regional": {
+      "type": "geojson",
+      "data": "map-data/china-railroads-regional.geojson",
+      "attribution": "© Natural Earth"
+    },
+    "china-towns-regional": {
+      "type": "geojson",
+      "data": "map-data/china-towns-regional.geojson",
+      "attribution": "© Natural Earth"
     }
   },
   "layers": [
@@ -39,6 +50,92 @@
       "source": "world-outline",
       "maxzoom": 13,
       "paint": { "fill-color": "#e2e8e5" }
+    },
+    {
+      "id": "china-lakes-fill",
+      "type": "fill",
+      "source": "china-lakes",
+      "minzoom": 3,
+      "maxzoom": 12,
+      "metadata": { "gopandacn:note": "ทะเลสาบระดับประเทศ/มณฑล (Natural Earth 1:50m) เพิ่ม 2026-08-06 กันจอว่างเปล่าช่วง z6-11 ที่ยังไม่มี city tile จริง — ดู ARCHITECTURE-ROADMAP.md" },
+      "paint": { "fill-color": "#c3dce8", "fill-opacity": 0.75 }
+    },
+    {
+      "id": "china-lakes-outline",
+      "type": "line",
+      "source": "china-lakes",
+      "minzoom": 3,
+      "maxzoom": 12,
+      "paint": { "line-color": "#7fa8c2", "line-width": 0.6 }
+    },
+    {
+      "id": "china-rivers-line",
+      "type": "line",
+      "source": "china-rivers",
+      "minzoom": 3,
+      "maxzoom": 12,
+      "paint": {
+        "line-color": "#7fa8c2",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.4, 6, 0.7, 10, 1.4]
+      }
+    },
+    {
+      "id": "china-roads-regional-line",
+      "type": "line",
+      "source": "china-roads-regional",
+      "minzoom": 3,
+      "maxzoom": 11,
+      "filter": ["<=", ["get", "min_zoom"], ["zoom"]],
+      "metadata": { "gopandacn:note": "โครงข่ายถนนสายหลักระดับภูมิภาค (Natural Earth 1:10m, clip เฉพาะโซนหูหนาน + ปักกิ่ง-เทียนจิน-ฉงลี่) เพิ่ม 2026-08-06 — เติมรายละเอียดช่วง z3-11 ก่อนที่ city tile จริงจะเริ่มมีถนนให้เห็น (~z8 ขึ้นไป) ใช้ min_zoom ต่อเส้นจาก Natural Earth เองเป็นตัวกรอง (curated แล้ว ไม่ได้เดา) — maxzoom ยืดจาก 9 เป็น 11 ตามคำขอป๋าโจ (Level 1) กันช่องว่างในพื้นที่ที่ไม่มี city tile จริง — ดู ARCHITECTURE-ROADMAP.md" },
+      "layout": { "line-join": "round" },
+      "paint": {
+        "line-color": "#9aa8b3",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.3, 6, 0.6, 9, 1.1]
+      }
+    },
+    {
+      "id": "china-railroads-line",
+      "type": "line",
+      "source": "china-railroads-regional",
+      "minzoom": 4,
+      "maxzoom": 11,
+      "metadata": { "gopandacn:note": "ทางรถไฟระดับภูมิภาค (Natural Earth 1:10m, clip 2 โซนทริปเดียวกับถนน) เพิ่ม 2026-08-06 Level 3" },
+      "paint": {
+        "line-color": "#b0abc4",
+        "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.3, 8, 0.7],
+        "line-dasharray": [1, 1.4]
+      }
+    },
+    {
+      "id": "china-towns-point",
+      "type": "circle",
+      "source": "china-towns-regional",
+      "minzoom": 5,
+      "maxzoom": 11,
+      "filter": ["<=", ["get", "min_zoom"], ["zoom"]],
+      "metadata": { "gopandacn:note": "เมืองรอง/จุดอ้างอิงระดับภูมิภาค (Natural Earth 1:10m populated places, ตัด 7 เมืองทริปที่มีป้ายของตัวเองแล้วออก) เพิ่ม 2026-08-06 Level 3" },
+      "paint": {
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 1.4, 9, 2.6],
+        "circle-color": "#8a97a3",
+        "circle-stroke-width": 0.6,
+        "circle-stroke-color": "#f7f8f7"
+      }
+    },
+    {
+      "id": "china-towns-label",
+      "type": "symbol",
+      "source": "china-towns-regional",
+      "minzoom": 6,
+      "maxzoom": 11,
+      "filter": ["<=", ["get", "min_zoom"], ["zoom"]],
+      "layout": {
+        "text-field": ["get", "name"],
+        "text-font": ["Noto Sans SC"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 6, 9, 10, 11],
+        "text-offset": [0, 0.7],
+        "text-anchor": "top"
+      },
+      "paint": { "text-color": "#6b7680", "text-halo-color": "#f7f8f7", "text-halo-width": 1.2 }
     },
     {
       "id": "province-line",
@@ -56,21 +153,19 @@
       "paint": { "line-color": "#4f7268", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.7, 8, 1.8] }
     },
     {
-      "id": "city-bounds-fill",
-      "type": "fill",
-      "source": "city-bounds",
-      "minzoom": 10.5,
-      "maxzoom": 11,
-      "metadata": { "gopandacn:note": "กรอบคร่าวๆ ของเมืองที่มีแผนที่ออฟไลน์จริง — เติมช่องว่างระหว่าง zoom 10.5 (ป๋าโจขอ 2026-08-04) ถึง 11 (จุดที่ tile รายละเอียดจริงเริ่มโหลด, ดู loadCityTiles ใน js/app.js) ไม่ใช่ถนน/แม่น้ำ/อาคารจริง — แค่บอกว่า 'ตรงนี้มีแผนที่ละเอียดรอไว้แล้ว'" },
-      "paint": { "fill-color": "#0f8a6c", "fill-opacity": 0.08 }
-    },
-    {
-      "id": "city-bounds-line",
-      "type": "line",
-      "source": "city-bounds",
-      "minzoom": 10.5,
-      "maxzoom": 11,
-      "paint": { "line-color": "#4f9c88", "line-width": 1.2, "line-dasharray": [2, 1.5] }
+      "id": "province-label",
+      "type": "symbol",
+      "source": "china-provinces",
+      "minzoom": 3,
+      "maxzoom": 7,
+      "metadata": { "gopandacn:note": "ชื่อมณฑล (อังกฤษ, จาก china-provinces.geojson ที่มีอยู่แล้ว ไม่ต้องหาข้อมูลใหม่) เพิ่ม 2026-08-06 Level 2 — จางหายไปที่ z7 เพราะพอซูมเข้ากว่านั้นจะเห็นแค่มณฑลเดียวเต็มจอ ป้ายชื่อไม่มีประโยชน์แล้ว" },
+      "layout": {
+        "text-field": ["get", "name"],
+        "text-font": ["Noto Sans SC"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 3, 10, 7, 13],
+        "text-letter-spacing": 0.05
+      },
+      "paint": { "text-color": "#5c7268", "text-halo-color": "#f7f8f7", "text-halo-width": 1.4 }
     }
   ]
 }

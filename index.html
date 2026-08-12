@@ -207,7 +207,7 @@
   .ph-body{flex:1; min-height:0; display:flex}
   .ph-rail{
     flex:none; width:56px; border-right:1px solid var(--pc-border); background:var(--pc-panel);
-    display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 0; overflow-y:auto;
+    display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 0;
   }
   .ph-rail button{
     width:40px;height:40px;border-radius:11px;font-size:1.15rem;
@@ -250,23 +250,35 @@
   .ph-hero .btn-ghost{border:1px solid var(--pc-border); color:var(--pc-ink)}
   .ph-hero-section{margin-top:26px; padding-top:18px; border-top:1px dashed var(--pc-border)}
 
-  /* ===== ฝั่งขวา: คลังสถานที่ inline (รวมมาจาก modal เดิม, ดู task #6 2026-08-04) =====
-     ยังไม่มีแผนที่จริงในนี้ — Stop/DiscoveryCard ไม่มี field พิกัด (gps/lat/lng) เลยสักตัว
-     เลยยังปักหมุดตามไทม์ไลน์ไม่ได้ (ดู project_gopandacn_ux_redesign.md) ใส่แค่ลิงก์ไปหน้าแผนที่เต็มจอไปก่อน */
+  /* ===== ฝั่งขวา: คลังสถานที่ inline (รวมมาจาก modal เดิม, ดู task #6 2026-08-04) ===== */
   .ph-side{
     flex:none; width:min(360px,34vw); border-left:1px solid var(--pc-border); background:var(--pc-panel);
     display:flex; flex-direction:column; padding:18px 18px 0; overflow-y:auto;
   }
   .ph-side h3{margin:0 0 2px; font-size:.92rem; color:var(--pc-ink)}
   .ph-side .sub2{color:var(--pc-dim)}
-  .ph-map-link{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
-    border:1px solid var(--pc-border); border-radius:12px; padding:11px 13px; margin-bottom:14px;
-    color:var(--pc-ink); text-decoration:none; font-size:.82rem; font-weight:700;
-  }
-  .ph-map-link:hover{border-color:var(--pc-accent); color:var(--pc-accent)}
-  .ph-map-link small{font-weight:500; color:var(--pc-dim)}
   @media (max-width:980px){.ph-side{display:none}} /* จอแคบ: ตัดออกก่อน ยังไม่ได้ออกแบบ responsive รอบนี้ */
+
+  /* ===== มินิแมปคลังสถานที่ (feature 2026-08-07, Round 2 ของ wireframe "แผนที่จริง+ค้นหาแบบฝัง
+     เข้า Planning Hero") — instance MapLibre แยกต่างหากจาก gpMap ของแผนที่เต็มจอโดยตั้งใจ (ไม่ reparent
+     canvas ข้ามวิว กันเรื่อง WebGL context/ปุ่มเครื่องมือชนกัน) ใช้ style เปล่าๆ ไม่โหลด pmtiles รายเมือง
+     ซ้ำ (แค่พื้นหลังสี + หมุดจริงจาก DISCOVERY_GPS ก็พอสำหรับ orientation ในแผงเล็ก) ดู js/discovery.js ===== */
+  .disc-minimap{
+    position:relative; height:150px; border-radius:12px; overflow:hidden;
+    border:1px solid var(--pc-border); background:#0a1324; margin-bottom:10px;
+  }
+  #discMinimapCanvas{position:absolute;inset:0;width:100%;height:100%}
+  .disc-minimap-expand{
+    position:absolute; top:8px; right:8px; z-index:2; width:28px; height:28px;
+    border-radius:8px; border:1px solid rgba(255,255,255,.28); background:rgba(15,23,42,.72);
+    color:#fff; font-size:.85rem; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .disc-minimap-expand:hover{background:rgba(15,23,42,.9)}
+  .disc-minimap-empty{margin-bottom:10px}
+  .disc-pin-mini{width:20px;height:20px;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));transition:transform .12s ease}
+  .disc-pin-mini:hover,.disc-pin-mini.disc-pin-hover{transform:scale(1.3)}
+  .disc-pin-mini.disc-pin-done{filter:drop-shadow(0 1px 2px rgba(0,0,0,.4)) drop-shadow(0 0 0 2px #0f8a6c)}
+  .stop-card.disc-pin-hover{border-color:var(--pc-accent)}
 
   /* ===== ลิ้นชักเครื่องมือรอง — reparent view/section ที่มีอยู่แล้วเข้ามา ไม่ clone ซ้ำ ===== */
   .ph-drawer{
@@ -648,7 +660,7 @@
   .rv-top{display:grid;grid-template-columns:minmax(300px,340px) 1fr;gap:12px;flex:none}
   .ring-card{
     border:1px solid var(--border);border-radius:var(--radius);
-    background:linear-gradient(160deg,#131f38 0%,#0d1730 100%);
+    background:linear-gradient(160deg,var(--panel) 0%,var(--panel-2) 100%);
     display:flex;align-items:center;gap:18px;padding:18px;
   }
   .ring-wrap{position:relative;width:110px;height:110px;flex:none}
@@ -1442,7 +1454,6 @@
           </div>
 
           <aside class="ph-side" aria-label="คลังสถานที่">
-            <button type="button" class="ph-map-link" id="phMapLink">🗺️ ดูแผนที่เต็มจอ<small>ยังไม่ผูกกับไทม์ไลน์</small></button>
             <h3>🔍 คลังสถานที่</h3>
             <div class="sub2">เลือกสถานที่ที่สนใจ กด "เพิ่มเข้าไอเดีย" แล้วลากไปจัดวันในไทม์ไลน์ซ้ายมือได้เลย</div>
             <div class="trip-form-row" style="margin-top:10px">
@@ -1451,11 +1462,18 @@
                   <option value="changsha">ฉางซา</option>
                   <option value="zhangjiajie">จางเจียเจี้ย</option>
                   <option value="beijing">ปักกิ่ง</option>
+                  <option value="fenghuang">เฟิ่งหวง</option>
+                  <option value="furong">ฝูหรง</option>
                   <option value="tianjin" disabled>เทียนจิน (เร็วๆ นี้)</option>
                   <option value="chengdu" disabled>เฉิงตู (เร็วๆ นี้)</option>
                 </select>
               </label>
             </div>
+            <div class="disc-minimap" id="discMinimap" hidden>
+              <div id="discMinimapCanvas" role="img" aria-label="มินิแมปคลังสถานที่"></div>
+              <button type="button" class="disc-minimap-expand" id="discMinimapExpand" aria-label="ขยายแผนที่เต็มจอ" title="ขยายแผนที่เต็มจอ">⛶</button>
+            </div>
+            <div class="disc-minimap-empty sub2" id="discMinimapEmpty" hidden>🗺️ เมืองนี้ยังไม่มีพิกัดยืนยันจาก WIKI — ดูรายชื่อด้านล่างแทนได้เลย</div>
             <input id="discoverySearch" type="search" class="tf-text" placeholder="ค้นหาชื่อสถานที่…" style="margin:8px 0">
             <div class="ph-cats" id="discoveryCats">
               <button class="cat-chip active" data-cat="all">ทั้งหมด</button>
