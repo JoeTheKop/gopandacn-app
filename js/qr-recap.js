@@ -111,7 +111,13 @@ function recapSummaryText(st){
     " ("+activeTrip.dayCount+" วัน "+(activeTrip.dayCount-1)+" คืน)\n"+
     (activeTrip.sub?activeTrip.sub+"\n":"")+
     st.c+" จุดหมาย · ใช้จ่ายจริง ¥"+fmt(journalState.spent)+" · งบที่วางแผน ¥"+fmt(st.total)+
+    (activeTrip.preTripThb?"\n+ ค่าใช้จ่ายก่อนเดินทาง (จ่ายเป็นบาท) ฿"+fmt(activeTrip.preTripThb):"")+
     "\nวางแผนด้วย GoPandaCN 🐼";
+}
+// บรรทัดค่าใช้จ่ายก่อนเดินทาง (จองจากไทยเป็นบาท ก่อนถึงจีน) แยกจาก .rc-stats ตั้งใจ — เป็นสกุลเงินคนละ
+// ตัวกับสถิติอื่นที่เป็น ¥ ล้วน ไม่ปนกันให้ดูเหมือนงบเดียวกัน (ตัดสินใจ 2026-08-13 คู่กับ js/trip-io.js)
+function preTripThbLine(){
+  return activeTrip.preTripThb?'<div class="rc-pretrip">+ ค่าใช้จ่ายก่อนเดินทาง (จ่ายเป็นบาท) ฿'+fmt(activeTrip.preTripThb)+'</div>':"";
 }
 $("#openRecap").addEventListener("click",function(){
   var st=tripStats();
@@ -119,6 +125,7 @@ $("#openRecap").addEventListener("click",function(){
     '<div class="rc-route">'+esc(activeTrip.sub||activeTrip.name)+'</div>'+
     '<div class="rc-dates num">'+dayDates[1]+' – '+dayDates[activeTrip.dayCount]+' · '+activeTrip.dayCount+' วัน '+(activeTrip.dayCount-1)+' คืน · '+esc(activeTrip.name)+'</div>'+
     '<div class="rc-stats num"><div><b>'+st.c+'</b><span>จุดหมาย</span></div><div><b>¥'+fmt(journalState.spent)+'</b><span>ใช้จ่ายจริง</span></div><div><b>¥'+fmt(st.total)+'</b><span>งบที่วางแผน</span></div><div><b>'+activeTrip.dayCount+'</b><span>วัน</span></div></div>'+
+    preTripThbLine()+
     '<div class="rc-foot">สร้างด้วย GoPandaCN · เพื่อนแตะลิงก์เพื่อโหลดแผนทริปนี้ไปใช้ได้เลย 🐼</div>';
   $("#recapMsg").textContent="";
   $("#recapModal").classList.add("show");
@@ -158,6 +165,10 @@ $("#recapSave").addEventListener("click",function(){
     ctx.fillStyle="#f5c26b";ctx.font="700 30px sans-serif";ctx.fillText(String(s[0]),x,400);
     ctx.fillStyle="#94a3b8";ctx.font="16px sans-serif";ctx.fillText(String(s[1]),x,428);
   });
+  if(activeTrip.preTripThb){
+    ctx.fillStyle="#94a3b8";ctx.font="16px sans-serif";
+    ctx.fillText("+ ค่าใช้จ่ายก่อนเดินทาง (จ่ายเป็นบาท) ฿"+fmt(activeTrip.preTripThb),40,452);
+  }
   ctx.strokeStyle="#334155";ctx.beginPath();ctx.moveTo(40,470);ctx.lineTo(860,470);ctx.stroke();
   ctx.fillStyle="#64748b";ctx.font="14px sans-serif";
   ctx.fillText("วางแผนด้วย GoPandaCN 🐼 — แอปนำเที่ยวจีนออฟไลน์สำหรับคนไทย",40,500);

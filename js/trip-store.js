@@ -21,6 +21,7 @@ export function normalizeTrip(t){
     // ทริป "default" (หูหนาน) ที่บันทึกไว้ก่อนรอบที่เพิ่ม field cities จะไม่มีค่านี้เลย —
     // เติมย้อนหลังให้เฉพาะ id นี้ เพื่อไม่ให้ผู้ใช้เก่าต้องลบทริปแล้วสร้างใหม่
     cities:(t.cities&&t.cities.length)?t.cities:(t.id==="default"?["ฉางซา","จางเจียเจี้ย","เฟิ่งหวง","ฝูหรง"]:[]),
+    preTripThb:t.preTripThb||0,
     days:t.days,backlog:t.backlog||[],
     journal:t.journal||{spent:0,entries:[]},
     checklist:t.checklist||defaultChecklist(),
@@ -33,7 +34,7 @@ export function persistCurrentTrip(){
   var idx=list.findIndex(function(t){return t.id===activeTrip.id});
   var snap={id:activeTrip.id,name:activeTrip.name,sub:activeTrip.sub||"",
     startDate:activeTrip.startDate,dayCount:activeTrip.dayCount,budget:activeTrip.budget,
-    cities:activeTrip.cities||[],
+    cities:activeTrip.cities||[],preTripThb:activeTrip.preTripThb||0,
     days:days,backlog:backlog,journal:journalState,checklist:checklist,updatedAt:Date.now()};
   if(idx>-1)list[idx]=snap;else list.push(snap);
   saveTripsList(list);

@@ -76,6 +76,8 @@ import {SEED_DAYS,SEED_BACKLOG,DEFAULT_TRIP,defaultChecklist,defaultJournalEntri
  * @property {{spent:number, entries:JournalEntry[]}} journal
  * @property {ChecklistCategory[]} checklist
  * @property {number} [updatedAt]
+ * @property {number} [preTripThb] - ค่าใช้จ่ายที่จ่ายเป็นเงินบาทไว้ก่อนเดินทาง (ตั๋วเครื่องบิน/จองล่วงหน้าจากไทย)
+ *   สะสมจากการนำเข้า Excel/CSV เท่านั้น (js/trip-io.js) ไม่ปนกับ Stop.cost ที่เป็น ¥ ล้วน — โชว์แยกใน Trip Recap
  */
 
 // แปลงจุดหมาย (stop) รูปแบบเดิม (array ตำแหน่ง) ให้เป็น object ชื่อฟิลด์เสมอ — ใช้กับข้อมูล
@@ -128,7 +130,7 @@ export var activeTrip=DEFAULT_TRIP();
 applyCalendar(activeTrip);
 // เขียนจาก trip-lifecycle code ใน app.js (switchTrip/createTrip/deleteTrip/createTripFromTemplate/
 // initTrips/.gopanda import confirm) — ทุกจุดเรียก setLiveData() ต่อทันทีเสมอ ไม่มีจุดไหนเรียกเดี่ยวๆ
-export function setActiveTrip(t){activeTrip=t}
+export function setActiveTrip(t){if(t.preTripThb==null)t.preTripThb=0;activeTrip=t}
 
 export var backlog=SEED_BACKLOG.map(normalizeStop);
 

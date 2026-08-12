@@ -4,6 +4,7 @@ import {$,uid,esc,parseCsv,csvField} from "./utils.js";
 import {activeTrip,curDay,getDay,sortDay} from "./state.js";
 import {CAT_MAP} from "./seed-data.js";
 import {renderBoard,renderDay} from "./board.js";
+import {persistCurrentTrip} from "./trip-store.js";
 
 /* ---- โหลดสคริปต์หนักแบบ lazy เฉพาะตอนใช้จริง (SheetJS/ExcelJS) — vendor เข้ามาเองแทน CDN ต่างประเทศ
    เพราะ cdn.sheetjs.com/cdn.jsdelivr.net เข้าไม่ได้/ช้ามากในจีน ถ้าโหลดตอนเปิดแอปจะบล็อกทั้งแอปรอ timeout
@@ -31,21 +32,69 @@ var DEMO_CSV=CSV_HEAD+"\n"+
   "8,21:00,🍧 บิงเฟิ่นถนนไท่ผิง,ของหวานปิดคืนแรกที่ฉางซา,อาหาร,15\n"+
   "9,20:30,🌃 ล่องเรือแม่น้ำเซียงยามค่ำ,รอบ 20:30 เห็นไฟตึก IFS เต็มตา,ที่เที่ยว,128";
 $("#dlTemplate").href="data:text/csv;charset=utf-8,%EF%BB%BF"+encodeURIComponent(CSV_TMPL);
+/* ---- อ่านคอลัมน์ตามชื่อหัวตาราง ไม่ใช่ตำแหน่งตรงๆ (2026-08-13) — เพราะไฟล์ที่ผู้ใช้แก้เองมักแทรก/สลับ
+   คอลัมน์เพิ่ม (เช่น "วันที่" จริง, แยกงบเป็น "บาท (THB)"/"หยวน (CNY)" คนละคอลัมน์) ถ้ายังอ่านตำแหน่ง A-F
+   ตรงๆ แบบเดิม ข้อมูลจะเลื่อนตำแหน่งผิดหมดแบบไม่มี error เตือน — รองรับทั้งไฟล์เก่า (6 คอลัมน์ตำแหน่งเดิม)
+   และไฟล์ใหม่ที่มีคอลัมน์เพิ่มได้พร้อมกัน โดยไม่ต้องรื้อฟอร์แมตเทมเพลต/export เดิม ---- */
+function detectCols(headerRow){
+  var idx={day:-1,time:-1,place:-1,desc:-1,cat:-1,cny:-1,thb:-1};
+  (headerRow||[]).forEach(function(h,i){
+    var t=String(h==null?"":h).trim();
+    if(t==="วัน")idx.day=i;
+    else if(t==="เวลา")idx.time=i;
+    else if(t==="สถานที่")idx.place=i;
+    else if(t==="รายละเอียด")idx.desc=i;
+    else if(t==="หมวด")idx.cat=i;
+    else if(t.indexOf("หยวน")>-1||t.indexOf("CNY")>-1||t.indexOf("งบ")>-1)idx.cny=i;
+    else if(t.indexOf("บาท")>-1||t.indexOf("THB")>-1)idx.thb=i;
+  });
+  return idx;
+}
+var LEGACY_IDX={day:0,time:1,place:2,desc:3,cat:4,cny:5,thb:-1};
+function toNum(v){var n=+String(v==null?"":v).replace(/[^\d.\-]/g,"");return isNaN(n)?0:n}
+// สะสมค่าใช้จ่ายที่จ่ายเป็นเงินบาทไว้ก่อนเดินทาง (ตั๋วเครื่องบิน/จองล่วงหน้าจากไทย) แยกจาก Stop.cost
+// ที่เป็น ¥ ล้วนเสมอ — ไม่แปลงเป็น ¥ ปนเข้าไปในการ์ด เพราะยังไงก็ต้องแปลงทุกอย่างกลับเป็นบาทตอนสรุปทริป
+// อยู่ดี (ตามที่ป๋าโจตัดสินใจ 2026-08-13) โชว์แยกใน Trip Recap (js/qr-recap.js) แทน
+var parsedPreTripThb=0;
 function previewRows(rows){
-  if(rows.length&&rows[0].join(",").indexOf("วัน")>-1)rows=rows.slice(1);
-  rows=rows.filter(function(r){return r.length>=3&&+r[0]>=1&&+r[0]<=activeTrip.dayCount});
-  parsedRows=rows;
+  var idx=detectCols(rows[0]),hasHeader=idx.day>-1;
+  if(hasHeader)rows=rows.slice(1);else idx=LEGACY_IDX;
+  parsedPreTripThb=0;
+  var norm=[];
+  rows.forEach(function(r){
+    if(!r||r.length<3)return;
+    var day=+r[idx.day];
+    if(isNaN(day))return;
+    var isPreTrip=day===0; // วันก่อนออกเดินทางจริง (เช่นขับรถไปสนามบิน/ขึ้นเครื่องคืนก่อน) — รวมเข้าวัน 1
+    if(isPreTrip)day=1;
+    if(day<1||day>activeTrip.dayCount)return;
+    var cny=idx.cny>-1?toNum(r[idx.cny]):0;
+    var thb=idx.thb>-1?toNum(r[idx.thb]):0;
+    var cost=0;
+    if(cny>0)cost=cny;
+    else if(thb>0)parsedPreTripThb+=thb; // จ่ายเป็นบาทตอนอยู่ไทย — ไม่ใส่ ¥ ที่การ์ด กันปนสกุลเงิน
+    norm.push({
+      day:day,time:(idx.time>-1?r[idx.time]:"")||"--",
+      title:(isPreTrip?"[ก่อนเดินทาง] ":"")+(idx.place>-1?r[idx.place]:"")||"",
+      desc:(idx.desc>-1?r[idx.desc]:"")||"",
+      cat:(idx.cat>-1?r[idx.cat]:"")||"ที่เที่ยว",
+      cost:cost
+    });
+  });
+  parsedRows=norm;
   $("#impPreview").style.display="flex";
-  if(!rows.length){
+  if(!norm.length){
     $("#impTable").innerHTML="";
-    $("#impMsg").textContent="อ่านไฟล์ไม่สำเร็จ หรือไม่พบแถวที่คอลัมน์ วัน = 1–10";
+    $("#impMsg").textContent="อ่านไฟล์ไม่สำเร็จ หรือไม่พบแถวที่คอลัมน์ วัน = 1–"+activeTrip.dayCount;
     return;
   }
   $("#impTable").innerHTML="<tr><th>วัน</th><th>เวลา</th><th>สถานที่</th><th>รายละเอียด</th><th>หมวด</th><th>งบ(¥)</th></tr>"+
-    rows.slice(0,8).map(function(r){
-      return "<tr><td class='num'>"+esc(r[0])+"</td><td class='num'>"+esc(r[1]||"--")+"</td><td>"+esc(r[2])+"</td><td>"+esc(r[3]||"")+"</td><td>"+esc(r[4]||"ที่เที่ยว")+"</td><td class='num'>"+esc(r[5]||"–")+"</td></tr>";
+    norm.slice(0,8).map(function(r){
+      return "<tr><td class='num'>"+esc(r.day)+"</td><td class='num'>"+esc(r.time)+"</td><td>"+esc(r.title)+"</td><td>"+esc(r.desc)+"</td><td>"+esc(r.cat)+"</td><td class='num'>"+(r.cost?esc(r.cost):"–")+"</td></tr>";
     }).join("");
-  $("#impMsg").textContent="พบ "+rows.length+" รายการ"+(rows.length>8?" (แสดงตัวอย่าง 8 แถวแรก)":"")+" — กด “นำเข้าทั้งหมด” เพื่อยืนยัน";
+  $("#impMsg").textContent="พบ "+norm.length+" รายการ"+(norm.length>8?" (แสดงตัวอย่าง 8 แถวแรก)":"")+
+    (parsedPreTripThb>0?" · ค่าใช้จ่ายก่อนเดินทาง (บาท) รวม ฿"+parsedPreTripThb.toLocaleString():"")+
+    " — กด “นำเข้าทั้งหมด” เพื่อยืนยัน";
 }
 function previewCsv(text){ previewRows(parseCsv(text)); }
 function handleFile(f){
@@ -222,17 +271,19 @@ $("#impConfirm").addEventListener("click",function(){
   if(!parsedRows||!parsedRows.length)return;
   var touched={};
   parsedRows.forEach(function(r){
-    var n=+r[0],d=getDay(n);
-    var cost=+String(r[5]||"").replace(/[^\d.]/g,"")||0;
-    d.s.push({time:r[1]||"--",title:r[2],desc:r[3]||"",cat:CAT_MAP[r[4]]||["spot","ที่เที่ยว"],cost:cost,id:uid("s_")});
-    touched[n]=1;
+    var d=getDay(r.day);
+    d.s.push({time:r.time,title:r.title,desc:r.desc,cat:CAT_MAP[r.cat]||["spot","ที่เที่ยว"],cost:r.cost||0,id:uid("s_")});
+    touched[r.day]=1;
     if(d.t==="ยังไม่ได้วางแผน")d.t="แผนที่นำเข้าจากไฟล์";
   });
   Object.keys(touched).forEach(function(n){sortDay(+n)});
+  if(parsedPreTripThb>0)activeTrip.preTripThb=(activeTrip.preTripThb||0)+parsedPreTripThb;
   renderBoard();renderDay(curDay);
+  persistCurrentTrip();
   importModal.classList.remove("show");
   var toast=$("#planToast");
-  toast.textContent="✓ นำเข้า "+parsedRows.length+" รายการ เข้าสู่วัน "+Object.keys(touched).join(", ")+" แล้ว";
+  toast.textContent="✓ นำเข้า "+parsedRows.length+" รายการ เข้าสู่วัน "+Object.keys(touched).join(", ")+" แล้ว"+
+    (parsedPreTripThb>0?" (+ ค่าใช้จ่ายก่อนเดินทาง ฿"+parsedPreTripThb.toLocaleString()+")":"");
   toast.hidden=false;
   setTimeout(function(){toast.hidden=true},5000);
   resetImport();
