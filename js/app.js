@@ -25,7 +25,7 @@ import "./packs.js";
 import {speakCn,openBig,showPhraseCat} from "./phrases.js";
 import {places,openDriverCard,openInfoCard} from "./driver.js";
 import {RATE} from "./currency.js";
-import {SEED_DAYS,SEED_BACKLOG,DEFAULT_TRIP,blankChecklist,defaultJournalEntries} from "./seed-data.js";
+import {blankChecklist} from "./seed-data.js";
 import {days,curDay,setCurDay,dayDates,computeCalendar,applyCalendar,activeTrip,setActiveTrip,
   backlog,journalState,checklist,setLiveData} from "./state.js";
 import {loadTripsList,saveTripsList,normalizeTrip,persistCurrentTrip,loadActiveTripId} from "./trip-store.js";
@@ -461,7 +461,17 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
     // days/backlog ถูกแปลงเป็น object ตอนประกาศตัวแปรแล้ว (ดูด้านบน) ไม่ต้องทำซ้ำตรงนี้
     var list=loadTripsList();
     if(!list.length){
-      // ครั้งแรกที่เปิดแอป — เซฟข้อมูลดีโมที่ hardcode ไว้เป็นทริป "default" ทริปแรกในรายการ
+      // ครั้งแรกที่เปิดแอปจริง — ไม่มีทริปเก่าให้ persist ก่อนเหมือน createTrip() ปกติ สร้างทริปว่างเปล่า
+      // ตรงๆ แทน (ไม่ใช้ persistCurrentTrip() เพราะจะไป persist ค่า activeTrip/days/checklist ที่บูตมา
+      // จาก DEFAULT_TRIP()/SEED_DAYS/defaultChecklist() ใน state.js ซึ่งเป็นข้อมูลทริปตัวอย่างตอนออกแบบ
+      // ไม่ใช่ทริปว่างจริง — ป๋าโจไม่ต้องการให้ผู้ใช้จริงเห็นข้อมูลนี้เลยแม้แต่แว้บเดียว ตัดสินใจ 2026-08-13)
+      var dayCount=7;
+      /** @type {Object<string,Day>} */
+      var blankDays={};
+      for(var n=1;n<=dayCount;n++)blankDays[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};
+      setActiveTrip({id:"trip-"+Date.now(),name:"ทริปแรกของฉัน",sub:"ทริปใหม่ — ยังไม่มีแผน",
+        startDate:new Date().toISOString().slice(0,10),dayCount:dayCount,budget:6000,cities:[]});
+      switchToLiveData(blankDays,[],{spent:0,entries:[]},blankChecklist());
       persistCurrentTrip();
       renderTripCardMeta();
       renderJournalSummary();renderJournalEntries();
