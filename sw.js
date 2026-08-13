@@ -9,7 +9,7 @@
    เดียวกับ shell ทำให้ทุกครั้งที่ bump SHELL_CACHE (แทบทุก commit) ของหนักพวกนี้โดนลบทิ้งไปด้วย
    ต้องโหลดใหม่ทั้งหมด ทั้งที่เนื้อหาไม่ได้เปลี่ยน — แยกออกมาแล้วของพวกนี้อยู่ถาวรข้าม shell version
    ดู ARCHITECTURE-ROADMAP.md § 3.2 */
-const SHELL_CACHE = "gopandacn-shell-v76";
+const SHELL_CACHE = "gopandacn-shell-v77";
 const TILE_CACHE = "gopanda-tiles-v1";
 const RUNTIME_CACHE = "gopanda-runtime-v1";
 const SHELL = [
@@ -19,7 +19,8 @@ const SHELL = [
   "./icons/icon-192.png", "./icons/icon-512.png",
   "./map-style.json",
   "./js/app.js", "./js/utils.js", "./js/docs.js", "./js/booking-links.js", "./js/discovery-data.js",
-  "./templates/changsha-zhangjiajie-5d.gopanda",
+  "./templates/changsha-2d.gopanda", "./templates/zhangjiajie-3d.gopanda",
+  "./templates/fenghuang-1d.gopanda", "./templates/furong-1d.gopanda",
   "./map-data/world-outline.geojson", "./map-data/china-provinces.geojson",
   "./map-data/china-rivers.geojson", "./map-data/china-lakes.geojson",
   "./map-data/china-roads-regional.geojson",
