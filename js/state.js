@@ -10,7 +10,7 @@
 // ส่วนตัวแปรที่ reassign เฉพาะ "ภายในไฟล์นี้เอง" (เช่น days/backlog/journalState/checklist ที่ถูก
 // reassign ทั้งก้อนเฉพาะใน setLiveData()) แค่ export var เฉยๆ พอ ไม่ต้องมี setter แยก
 import {uid} from "./utils.js";
-import {SEED_DAYS,SEED_BACKLOG,DEFAULT_TRIP,defaultChecklist,defaultJournalEntries} from "./seed-data.js";
+import {SEED_DAYS,SEED_BACKLOG,DEFAULT_TRIP,defaultChecklist,blankChecklist,defaultJournalEntries} from "./seed-data.js";
 
 /**
  * @typedef {Object} Stop
@@ -164,6 +164,6 @@ export function setLiveData(days2,backlog2,journal2,checklist2){
   days=days2;backlog=(backlog2||[]).map(normalizeStop);curDay=1;
   Object.keys(days).forEach(function(n){days[n].s=(days[n].s||[]).map(normalizeStop)});
   journalState=journal2||{spent:0,entries:[]};
-  checklist=checklist2||defaultChecklist();
+  checklist=checklist2||blankChecklist();
   applyCalendar(activeTrip);
 }

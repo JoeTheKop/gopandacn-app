@@ -25,7 +25,7 @@ import "./packs.js";
 import {speakCn,openBig,showPhraseCat} from "./phrases.js";
 import {places,openDriverCard,openInfoCard} from "./driver.js";
 import {RATE} from "./currency.js";
-import {SEED_DAYS,SEED_BACKLOG,DEFAULT_TRIP,defaultChecklist,defaultJournalEntries} from "./seed-data.js";
+import {SEED_DAYS,SEED_BACKLOG,DEFAULT_TRIP,blankChecklist,defaultJournalEntries} from "./seed-data.js";
 import {days,curDay,setCurDay,dayDates,computeCalendar,applyCalendar,activeTrip,setActiveTrip,
   backlog,journalState,checklist,setLiveData} from "./state.js";
 import {loadTripsList,saveTripsList,normalizeTrip,persistCurrentTrip} from "./trip-store.js";
@@ -134,7 +134,7 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
     setActiveTrip({id:activeTrip.id,name:tripName,sub:activeTrip.sub,
       startDate:startDate||"2026-09-12",dayCount:dayCount||Object.keys(gopandaImportData.days||{}).length||10,
       budget:tm.budget||6000,cities:tm.cities||[]});
-    switchToLiveData(gopandaImportData.days,gopandaImportData.backlog||[],gopandaImportData.journal||{spent:0,entries:[]},gopandaImportData.checklist||defaultChecklist());
+    switchToLiveData(gopandaImportData.days,gopandaImportData.backlog||[],gopandaImportData.journal||{spent:0,entries:[]},gopandaImportData.checklist||blankChecklist());
     persistCurrentTrip();
     $("#qrModal").classList.remove("show");
     resetGopandaImport();
@@ -297,7 +297,7 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
     var blankDays={};
     for(var n=1;n<=dayCount;n++)blankDays[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};
     setActiveTrip({id:id,name:name,sub:"ทริปใหม่ — ยังไม่มีแผน",startDate:startDate,dayCount:dayCount,budget:budget,cities:[]});
-    switchToLiveData(blankDays,[],{spent:0,entries:[]},defaultChecklist());
+    switchToLiveData(blankDays,[],{spent:0,entries:[]},blankChecklist());
     persistCurrentTrip();
     $("#newTripName").value="";
     var toast=$("#planToast");
@@ -430,7 +430,7 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
     var dayCount=tpl.template.dayCount||Object.keys(tpl.days).length;
     var name=tpl.template.name_th;
     setActiveTrip({id:id,name:name,sub:"เริ่มจากเทมเพลต "+tpl.template.region,startDate:startDate,dayCount:dayCount,budget:6000,cities:tpl.template.cities||[]});
-    switchToLiveData(tpl.days,[],{spent:0,entries:[]},defaultChecklist());
+    switchToLiveData(tpl.days,[],{spent:0,entries:[]},blankChecklist());
     persistCurrentTrip();
     var toast=$("#planToast");
     toast.textContent="✓ สร้างทริป \""+name+"\" จากเทมเพลตแล้ว ("+dayCount+" วัน) ปรับแก้ต่อได้เลย";toast.hidden=false;

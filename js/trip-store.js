@@ -4,7 +4,7 @@
 // ตั้งใจไม่มี rendering/DOM เลยในไฟล์นี้ — ให้โมดูล feature อื่น (board.js, checklist.js, journal.js,
 // discovery.js ฯลฯ ใน Phase C) import persistCurrentTrip() ได้โดยตรงในอนาคต โดยไม่ต้อง import
 // กลับไปที่ app.js (กัน import cycle — ดู Risk R1 ในแผน Opus ของขั้น state.js ก่อนหน้านี้)
-import {defaultChecklist} from "./seed-data.js";
+import {blankChecklist} from "./seed-data.js";
 import {activeTrip,days,backlog,journalState,checklist} from "./state.js";
 
 var TRIPS_KEY="gopanda_trips_v1",ACTIVE_KEY="gopanda_active_trip_v1";
@@ -24,7 +24,7 @@ export function normalizeTrip(t){
     preTripThb:t.preTripThb||0,
     days:t.days,backlog:t.backlog||[],
     journal:t.journal||{spent:0,entries:[]},
-    checklist:t.checklist||defaultChecklist(),
+    checklist:t.checklist||blankChecklist(),
     updatedAt:t.updatedAt||Date.now()
   };
 }
