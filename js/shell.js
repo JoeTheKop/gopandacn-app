@@ -66,6 +66,10 @@ export function closeDrawers(){
   closePhDrawer();
 }
 $("#openSidebar").addEventListener("click",function(){
+  // .app.plan-active .sidebar{display:none} ซ่อน sidebar แบบเด็ดขาดตอนอยู่โต๊ะวางแผน (เพื่อยึดจอเต็ม
+  // สำหรับ Planning hero) เลยต้องถอด plan-active ออกด้วยตอนกด "กลับหน้าแรก" ไม่งั้นปุ่มนี้เพิ่ม class
+  // "open" ให้เฉยๆ แต่ display:none ยังทับอยู่ กดแล้วไม่มีอะไรเกิดขึ้นเลย (บั๊กที่ป๋าโจเจอ 2026-08-13)
+  $("#app").classList.remove("plan-active");
   sidebar.classList.add("open");overlay.classList.add("show");
 });
 $("#openDock").addEventListener("click",function(){

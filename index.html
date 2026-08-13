@@ -174,6 +174,11 @@
   /* ===== Planning hero (ผัง 2026-08-04) — โทน Direction C สโคปเฉพาะหน้านี้ ===== */
   .app.plan-active .sidebar,.app.plan-active .dock{display:none}
   .app.plan-active{grid-template-columns:1fr}
+  /* .home-open (ปุ่ม 🏠 กลับหน้าแรก) ปกติซ่อนบนจอกว้าง (บรรทัด .home-open{display:none} ด้านบน) เพราะ
+     .sidebar โชว์ค้างอยู่แล้วเป็นคอลัมน์ถาวร ไม่ต้องมีปุ่มเปิด — แต่ plan-active ซ่อน .sidebar แม้บนจอกว้าง
+     ด้วย (ยึดจอเต็มให้ Planning hero) เลยกลายเป็นไม่มีทางกลับเลยบนเดสก์ท็อป (บั๊กที่ป๋าโจเจอ 2026-08-13
+     — จอไม่ได้แคบ แต่ปุ่มก็ยังหายไปเพราะ CSS ดีฟอลต์ซ่อนไว้) โชว์ปุ่มนี้ทุกความกว้างจอตอน plan-active */
+  .app.plan-active .home-open{display:grid}
   /* Direction C — remap ตัวแปรเดิมตรงๆ (ไม่ใช่แค่เพิ่มชื่อใหม่) ให้คอมโพเนนต์เดิมทั้งหมด
      (.modal-card, .book-card, .btn-gold, .tag, .timeline .stop-card ฯลฯ) ได้โทนสีใหม่อัตโนมัติ
      โดยไม่ต้องไล่ override ทีละคลาส — ใช้ทั้งใน #view-plan และ #phDrawer (ลิ้นชักอยู่นอก DOM
@@ -731,9 +736,15 @@
   .picker-close:hover{background:#f87171;border-color:#f87171;color:#fff}
   .picker-panel h3{margin:0;font-size:.98rem}
   .picker-panel .sub2{font-size:.73rem;color:var(--muted);margin-bottom:4px}
+  /* หมายเหตุ (2026-08-13): เดิม #discoveryList มี flex:1;overflow-y:auto เป็นของตัวเอง ตกค้างจากยุคที่
+     Discovery ยังเป็น modal เต็มจอ (ใช้ .picker-panel เป็นกรอบ) — ตอนย้ายมาเป็น inline sidebar ฝั่งขวา
+     ของ Planning hero (2026-08-04) ทำให้เกิด scroll ซ้อน 2 ชั้น: scroll เฉพาะโซนการ์ดได้ (nested) แต่
+     scroll ทั้งแผง .ph-side (หัวข้อ/มินิแมป/ชิปหมวด/ช่องค้นหา) จากจุดไหนก็ได้ไม่ได้ — กดเลื่อนเมาส์ตรง
+     ส่วนหัวแล้วรู้สึกเหมือน sidebar ทั้งอันเลื่อนไม่ได้เลย (ป๋าโจเจอปัญหานี้จริง) เอา flex/overflow ออก
+     ให้ .ph-side (มี overflow-y:auto อยู่แล้ว) เป็นตัวเลื่อนเดียวของทั้งแผงแทน */
   #discoveryList{
-    flex:1;overflow-y:auto;margin-top:8px;
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-content:start;
+    margin-top:8px;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;
   }
   /* ---- ล็อกแอปด้วย PIN — คลุมทั้งจอ กดข้างนอกปิดไม่ได้ (ต่างจาก .picker ทั่วไป) ---- */
   .lock-screen{
