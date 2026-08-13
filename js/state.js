@@ -139,7 +139,17 @@ export function getDay(n){if(!days[n])days[n]={t:"ยังไม่ได้ว
 /** @param {number} ci - 0 = backlog, 1..N = วันที่ n @returns {Stop[]} */
 export function colArr(ci){return ci===0?backlog:getDay(ci).s}
 export function colCost(ci){return colArr(ci).reduce(function(a,s){return a+(+s.cost||0)},0)}
-export function sortDay(n){getDay(n).s.sort(function(a,b){return (a.time==="--"?"99":a.time).localeCompare(b.time==="--"?"99":b.time)})}
+// รายการ "[ก่อนเดินทาง] " (นำเข้าจากวัน 0 ในไฟล์ Excel/CSV — เหตุการณ์เย็นวันก่อนออกเดินทางจริง เช่น
+// ไปสนามบิน/ขึ้นเครื่องคืนก่อน) ต้องเรียงอยู่บนสุดของวัน 1 เสมอ ไม่งั้นเวลาบนนาฬิกา (16:00/19:55) จะ
+// เรียงตามหลังกิจกรรมเช้าวันจริง (เช่น 09:20 ถึงจุดหมาย) ทำให้ดูเหมือนไปสนามบินหลังถึงจุดหมายแล้ว
+function isPreTripStop(s){return s.title.indexOf("[ก่อนเดินทาง] ")===0}
+export function sortDay(n){
+  getDay(n).s.sort(function(a,b){
+    var aPre=isPreTripStop(a)?0:1,bPre=isPreTripStop(b)?0:1;
+    if(aPre!==bPre)return aPre-bPre;
+    return (a.time==="--"?"99":a.time).localeCompare(b.time==="--"?"99":b.time);
+  });
+}
 
 /* ---- แปลงราคา = จดบัญชีเลย (feature 1.6) + สมุดบันทึกผูกกับระบบหลายทริปจริง (feature 1.4)
    journalState เป็นของทริปที่กำลังเปิดอยู่เท่านั้น — สลับ/สร้าง/นำเข้าทริปแล้วจะสลับชุดนี้ตาม (ดู setLiveData) */

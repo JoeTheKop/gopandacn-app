@@ -1,7 +1,7 @@
 // @ts-check
 // นำเข้า/ส่งออกแผนทริป (CSV/Excel) — แยกจาก app.js (docs/design/ARCHITECTURE-ROADMAP.md § 4.5 ข้อ 6)
 import {$,uid,esc,parseCsv,csvField} from "./utils.js";
-import {activeTrip,curDay,getDay,sortDay} from "./state.js";
+import {activeTrip,curDay,getDay,sortDay,applyCalendar} from "./state.js";
 import {CAT_MAP} from "./seed-data.js";
 import {renderBoard,renderDay} from "./board.js";
 import {persistCurrentTrip} from "./trip-store.js";
@@ -57,17 +57,33 @@ function toNum(v){var n=+String(v==null?"":v).replace(/[^\d.\-]/g,"");return isN
 // อยู่ดี (ตามที่ป๋าโจตัดสินใจ 2026-08-13) โชว์แยกใน Trip Recap (js/qr-recap.js) แทน
 var parsedPreTripThb=0;
 function previewRows(rows){
-  var idx=detectCols(rows[0]),hasHeader=idx.day>-1;
-  if(hasHeader)rows=rows.slice(1);else idx=LEGACY_IDX;
+  // สแกนสูงสุด 3 แถวแรกหา header จริง — รองรับไฟล์ที่มีแถวหัวเรื่อง (title row) ก่อนแถว header
+  var idx={day:-1,time:-1,place:-1,desc:-1,cat:-1,cny:-1,thb:-1},headerAt=-1;
+  for(var _r=0;_r<Math.min(3,rows.length);_r++){
+    var _c=detectCols(rows[_r]);
+    if(_c.day>-1){idx=_c;headerAt=_r;break;}
+  }
+  var hasHeader=headerAt>-1;
+  if(hasHeader)rows=rows.slice(headerAt+1);else idx=LEGACY_IDX;
   parsedPreTripThb=0;
-  var norm=[];
+  var norm=[],skippedNoDay=[];
   rows.forEach(function(r){
     if(!r||r.length<3)return;
-    var day=+r[idx.day];
+    // เซลล์ว่าง (แถวคั่นหัวข้อวัน/แถวรวมยอด/แถวว่างท้ายไฟล์) กลายเป็น "" จาก SheetJS ซึ่ง +"" คือ 0
+    // ไม่ใช่ NaN ใน JS — เช็คสตริงว่างก่อนแปลงเลข กันไม่ให้แถวขยะเหล่านี้ถูกเข้าใจผิดว่าเป็น "วัน 0" จริง
+    // แถวที่มีข้อความสถานที่จริงแต่ลืมใส่เลขวัน (ไม่ใช่แถวว่างเปล่าล้วน) ไม่เดาว่าเป็นวันไหน แต่เก็บชื่อไว้
+    // เตือนในสรุปแทน ให้ผู้ใช้กลับไปเติมเลขวันในไฟล์เอง
+    var rawDay=String(idx.day>-1?r[idx.day]:"").trim();
+    if(rawDay===""){
+      var skippedPlace=String(idx.place>-1?(r[idx.place]||""):"").trim();
+      if(skippedPlace)skippedNoDay.push(skippedPlace);
+      return;
+    }
+    var day=+rawDay;
     if(isNaN(day))return;
     var isPreTrip=day===0; // วันก่อนออกเดินทางจริง (เช่นขับรถไปสนามบิน/ขึ้นเครื่องคืนก่อน) — รวมเข้าวัน 1
     if(isPreTrip)day=1;
-    if(day<1||day>activeTrip.dayCount)return;
+    if(day<1)return;
     var cny=idx.cny>-1?toNum(r[idx.cny]):0;
     var thb=idx.thb>-1?toNum(r[idx.thb]):0;
     var cost=0;
@@ -92,9 +108,13 @@ function previewRows(rows){
     norm.slice(0,8).map(function(r){
       return "<tr><td class='num'>"+esc(r.day)+"</td><td class='num'>"+esc(r.time)+"</td><td>"+esc(r.title)+"</td><td>"+esc(r.desc)+"</td><td>"+esc(r.cat)+"</td><td class='num'>"+(r.cost?esc(r.cost):"–")+"</td></tr>";
     }).join("");
+  var maxImportDay=norm.reduce(function(m,r){return Math.max(m,r.day)},0);
+  var extendNote=maxImportDay>activeTrip.dayCount?" · จะขยายทริปเป็น "+maxImportDay+" วัน":"";
+  var skipNote=skippedNoDay.length?" · ⚠️ ข้าม "+skippedNoDay.length+" แถวที่ไม่มีเลขวัน ("+
+    skippedNoDay.slice(0,3).join(", ")+(skippedNoDay.length>3?" ฯลฯ":"")+") — กลับไปเติมเลขวันในไฟล์แล้วนำเข้าใหม่":"";
   $("#impMsg").textContent="พบ "+norm.length+" รายการ"+(norm.length>8?" (แสดงตัวอย่าง 8 แถวแรก)":"")+
     (parsedPreTripThb>0?" · ค่าใช้จ่ายก่อนเดินทาง (บาท) รวม ฿"+parsedPreTripThb.toLocaleString():"")+
-    " — กด “นำเข้าทั้งหมด” เพื่อยืนยัน";
+    extendNote+skipNote+" — กด “นำเข้าทั้งหมด” เพื่อยืนยัน";
 }
 function previewCsv(text){ previewRows(parseCsv(text)); }
 function handleFile(f){
@@ -269,6 +289,8 @@ $("#exportXlsx").addEventListener("click",function(){
 });
 $("#impConfirm").addEventListener("click",function(){
   if(!parsedRows||!parsedRows.length)return;
+  var maxDay=parsedRows.reduce(function(m,r){return Math.max(m,r.day)},0);
+  if(maxDay>activeTrip.dayCount){activeTrip.dayCount=maxDay;applyCalendar(activeTrip);}
   var touched={};
   parsedRows.forEach(function(r){
     var d=getDay(r.day);

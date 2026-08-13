@@ -400,7 +400,7 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
      ไฟล์ template อยู่ใน templates/*.gopanda — โครง days เหมือน .gopanda ทริปจริงทุกอย่าง
      (ดู docs/design/TRIP-PLANNING-WORKFLOW.md § 4) เลยส่งตรงเข้า switchToLiveData ได้เลย
      ไม่ต้อง map รูปแบบใหม่ ---- */
-  var TEMPLATE_FILES=["templates/changsha-zhangjiajie-5d.gopanda"];
+  var TEMPLATE_FILES=["templates/changsha-2d.gopanda","templates/zhangjiajie-3d.gopanda","templates/fenghuang-1d.gopanda","templates/furong-1d.gopanda"];
   var loadedTemplates=null;
   $$(".ph-start-tab").forEach(function(tab){
     tab.addEventListener("click",function(){
