@@ -378,16 +378,23 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
     var openCard=e.target.closest("[data-open-trip]");
     if(openCard){e.preventDefault();switchTrip(openCard.dataset.openTrip);showView("map")}
   });
-  $("#createTripBtn").addEventListener("click",function(){
+  // นับจำนวนวันจากช่วง "วันเริ่มทริป" ถึง "ถึงวันที่" แทนให้ผู้ใช้พิมพ์จำนวนวันเอง (เปลี่ยน 2026-08-13
+  // ตามที่ป๋าโจขอ — กันพิมพ์จำนวนวันผิดจากที่ตั้งใจ) คืน null ถ้าวันที่ยังไม่ครบ/วันสิ้นสุดมาก่อนวันเริ่ม
+  /** @returns {number|null} */
+  function scratchDayCount(){
+    var start=$("#newTripStart").value,end=$("#newTripEnd").value;
+    if(!start||!end)return null;
+    var d=Math.round((+new Date(end+"T00:00:00")-+new Date(start+"T00:00:00"))/86400000)+1;
+    return d>=1?d:null;
+  }
+  function submitScratchTrip(){
     if(!$("#newTripStart").value)$("#newTripStart").value=new Date().toISOString().slice(0,10);
-    createTrip($("#newTripName").value,$("#newTripStart").value,$("#newTripDays").value,$("#newTripBudget").value);
-  });
-  $("#newTripName").addEventListener("keydown",function(e){
-    if(e.key==="Enter"){
-      if(!$("#newTripStart").value)$("#newTripStart").value=new Date().toISOString().slice(0,10);
-      createTrip($("#newTripName").value,$("#newTripStart").value,$("#newTripDays").value,$("#newTripBudget").value);
-    }
-  });
+    var dayCount=scratchDayCount();
+    if(dayCount==null){$("#newTripEnd").focus();return}
+    createTrip($("#newTripName").value,$("#newTripStart").value,dayCount,$("#newTripBudget").value);
+  }
+  $("#createTripBtn").addEventListener("click",submitScratchTrip);
+  $("#newTripName").addEventListener("keydown",function(e){if(e.key==="Enter")submitScratchTrip()});
 
   /* ---- สร้างทริปใหม่: เส้นทาง "เลือกจากเทมเพลต" (task #4, ผัง 2026-08-04) ----
      ไฟล์ template อยู่ใน templates/*.gopanda — โครง days เหมือน .gopanda ทริปจริงทุกอย่าง
