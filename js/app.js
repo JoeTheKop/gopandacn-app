@@ -284,6 +284,22 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
     toast.textContent="✓ สลับไปทริป \""+t.name+"\" แล้ว";toast.hidden=false;
     setTimeout(function(){toast.hidden=true},4000);
   }
+  /** สร้าง+เปิดใช้งานทริปว่างเปล่าจริงตรงๆ (ไม่ persist ทริปเดิมก่อนเหมือน createTrip() ปกติ) — ใช้ร่วมกัน
+   * ทั้ง initTrips() ตอนเปิดแอปครั้งแรก และ deleteTrip() ตอนลบทริปสุดท้าย ตั้งใจไม่ location.reload()
+   * เหมือนเดิม เพราะ beforeunload listener (ท้ายไฟล์นี้) จะ persistCurrentTrip() ทริปเดิมที่ยังไม่ถูกเคลียร์
+   * กลับเข้า storage ทับทริปว่างที่เพิ่งสร้างพอดี ก่อน reload จะทันเกิดขึ้นจริง — ทำให้ลบไม่ติดจริง
+   * (บั๊กที่ป๋าโจเจอ 2026-08-13 หลังลบทริปสุดท้ายแล้วเด้งกลับมาเหมือนเดิม)
+   * @param {string} [name] @returns {void} */
+  function createBlankFirstTrip(name){
+    var dayCount=7;
+    /** @type {Object<string,Day>} */
+    var blankDays={};
+    for(var n=1;n<=dayCount;n++)blankDays[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};
+    setActiveTrip({id:"trip-"+Date.now(),name:name||"ทริปแรกของฉัน",sub:"ทริปใหม่ — ยังไม่มีแผน",
+      startDate:new Date().toISOString().slice(0,10),dayCount:dayCount,budget:6000,cities:[]});
+    switchToLiveData(blankDays,[],{spent:0,entries:[]},blankChecklist());
+    persistCurrentTrip();
+  }
   /** @param {string} name @param {string} startDate @param {number} dayCount @param {number} budget @returns {void} */
   function createTrip(name,startDate,dayCount,budget){
     name=(name||"").trim();
@@ -316,7 +332,10 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
         setActiveTrip({id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget,cities:t.cities||[]});
         switchToLiveData(t.days,t.backlog,t.journal,t.checklist);persistCurrentTrip();
       }
-      else location.reload(); // ลบทริปสุดท้ายทิ้ง — โหลดดีโมเริ่มต้นใหม่สะอาด ๆ
+      // ลบทริปสุดท้ายทิ้ง — สร้างทริปว่างใหม่ตรงๆ แทน location.reload() เดิม (ไม่ reload อีกต่อไป เพราะ
+      // beforeunload listener ท้ายไฟล์นี้จะ persistCurrentTrip() ทริปเดิมที่ยังไม่ถูกเคลียร์กลับเข้า storage
+      // ทับทริปว่างที่เพิ่งสร้างพอดีก่อน reload จะทันเกิดขึ้นจริง — ทำให้ลบไม่ติดจริง (บั๊กที่ป๋าโจเจอ 2026-08-13)
+      else createBlankFirstTrip();
     }
     renderMyTripsList();
   }
@@ -465,16 +484,7 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
       // ตรงๆ แทน (ไม่ใช้ persistCurrentTrip() เพราะจะไป persist ค่า activeTrip/days/checklist ที่บูตมา
       // จาก DEFAULT_TRIP()/SEED_DAYS/defaultChecklist() ใน state.js ซึ่งเป็นข้อมูลทริปตัวอย่างตอนออกแบบ
       // ไม่ใช่ทริปว่างจริง — ป๋าโจไม่ต้องการให้ผู้ใช้จริงเห็นข้อมูลนี้เลยแม้แต่แว้บเดียว ตัดสินใจ 2026-08-13)
-      var dayCount=7;
-      /** @type {Object<string,Day>} */
-      var blankDays={};
-      for(var n=1;n<=dayCount;n++)blankDays[n]={t:"ยังไม่ได้วางแผน",m:"0 จุดหมาย",s:[]};
-      setActiveTrip({id:"trip-"+Date.now(),name:"ทริปแรกของฉัน",sub:"ทริปใหม่ — ยังไม่มีแผน",
-        startDate:new Date().toISOString().slice(0,10),dayCount:dayCount,budget:6000,cities:[]});
-      switchToLiveData(blankDays,[],{spent:0,entries:[]},blankChecklist());
-      persistCurrentTrip();
-      renderTripCardMeta();
-      renderJournalSummary();renderJournalEntries();
+      createBlankFirstTrip();
       return;
     }
     // กลับไปทริปที่เปิดค้างไว้ล่าสุดก่อนเสมอ (เขียนไว้ทุกครั้งใน persistCurrentTrip()) — ใช้
