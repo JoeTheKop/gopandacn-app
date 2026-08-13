@@ -28,7 +28,7 @@ import {RATE} from "./currency.js";
 import {SEED_DAYS,SEED_BACKLOG,DEFAULT_TRIP,blankChecklist,defaultJournalEntries} from "./seed-data.js";
 import {days,curDay,setCurDay,dayDates,computeCalendar,applyCalendar,activeTrip,setActiveTrip,
   backlog,journalState,checklist,setLiveData} from "./state.js";
-import {loadTripsList,saveTripsList,normalizeTrip,persistCurrentTrip} from "./trip-store.js";
+import {loadTripsList,saveTripsList,normalizeTrip,persistCurrentTrip,loadActiveTripId} from "./trip-store.js";
 import {flyToCity,renderCityChips,refreshMapDownloadBtn,renderTileReadyCard} from "./map.js";
 import {titles,showView,closeDrawers,sidebar,overlay} from "./shell.js";
 import "./chat.js";
@@ -467,7 +467,11 @@ import {gopandaImportData,resetGopandaImport} from "./qr-recap.js";
       renderJournalSummary();renderJournalEntries();
       return;
     }
-    var t=pickNearestTrip(list.map(normalizeTrip));
+    // กลับไปทริปที่เปิดค้างไว้ล่าสุดก่อนเสมอ (เขียนไว้ทุกครั้งใน persistCurrentTrip()) — ใช้
+    // pickNearestTrip() เป็น fallback เฉพาะตอนยังไม่เคยมีการเซฟค่านี้ หรือทริปนั้นถูกลบไปแล้ว
+    var normalized=list.map(normalizeTrip);
+    var lastId=loadActiveTripId();
+    var t=(lastId&&normalized.find(function(x){return x.id===lastId}))||pickNearestTrip(normalized);
     setActiveTrip({id:t.id,name:t.name,sub:t.sub,startDate:t.startDate,dayCount:t.dayCount,budget:t.budget,cities:t.cities||[]});
     switchToLiveData(t.days,t.backlog,t.journal,t.checklist);
   })();

@@ -9,6 +9,10 @@ import {activeTrip,days,backlog,journalState,checklist} from "./state.js";
 
 var TRIPS_KEY="gopanda_trips_v1",ACTIVE_KEY="gopanda_active_trip_v1";
 export function loadTripsList(){try{return JSON.parse(localStorage.getItem(TRIPS_KEY))||[]}catch(e){return[]}}
+// เขียนไว้ทุกครั้งใน persistCurrentTrip() ด้านล่าง แต่เดิมไม่มีใครอ่านกลับมาใช้เลย — initTrips() ใน
+// app.js เลยคำนวณ "ทริปใกล้วันที่สุด" ใหม่ทุกครั้งที่เปิดแอปแทนที่จะกลับไปทริปที่ทำค้างไว้จริง
+// (ตัดสินใจแก้ 2026-08-13 หลังป๋าโจสังเกตว่าเช็กลิสต์เด้งกลับไปติ๊กเต็มเหมือนเดิมทุกครั้งที่เปิดเบราว์เซอร์)
+export function loadActiveTripId(){return localStorage.getItem(ACTIVE_KEY)}
 export function saveTripsList(list){localStorage.setItem(TRIPS_KEY,JSON.stringify(list))}
 // เติมฟิลด์ที่อาจขาดไปสำหรับทริปที่เคยบันทึกไว้ก่อนรอบอัปเดตนี้ (backward-compat)
 /** @param {any} t - ทริปที่โหลดมาจาก localStorage/.gopanda อาจขาดฟิลด์ใหม่ๆ ไป @returns {import("./state.js").Trip} */
