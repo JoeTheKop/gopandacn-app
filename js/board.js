@@ -19,6 +19,7 @@ import {CAT_MAP} from "./seed-data.js";
 function stopCardHTML(s,idx,editable){
   return '<div class="stop"><div class="stop-card'+(editable?' stop-card-editable':'')+'"'+
     (editable?' data-idx="'+idx+'" role="button" tabindex="0" aria-label="แก้ไขจุดหมายนี้"':'')+'>'+
+    (editable?'<button type="button" class="stop-remove" data-remove-idx="'+idx+'" aria-label="ลบจุดหมายนี้" title="ลบจุดหมายนี้">✕</button>':'')+
     '<div class="stop-time num">'+esc(s.time)+'</div>'+
     '<div class="stop-body"><h4>'+esc(s.title)+'</h4><p>'+esc(s.desc)+'</p>'+
     '<span class="tag '+s.cat[0]+'">'+esc(s.cat[1])+'</span>'+
@@ -78,7 +79,16 @@ $("#planDayStrip").addEventListener("click",function(e){
   var c=e.target.closest(".day-chip");if(!c)return;
   goToDay(+c.dataset.day);
 });
+// ปุ่ม ✕ ลบเร็ว (data-remove-idx) ซ้อนอยู่ข้างในการ์ดเดียวกับ data-idx ที่เปิด modal แก้ไข —
+// เช็คปุ่มลบก่อนเสมอแล้ว return กันไม่ให้ทะลุไปเปิด modal ด้วย (ไม่ใช้ addEventListener แยกอีกตัว
+// เพราะ listener บน element เดียวกันไม่ block กันเองด้วย stopPropagation)
 $("#planTimeline").addEventListener("click",function(e){
+  var rm=e.target.closest("[data-remove-idx]");
+  if(rm){
+    var s=colArr(curDay)[+rm.dataset.removeIdx];
+    if(s&&confirm('ลบ "'+s.title+'" ออกจากแผน?'))deleteStopAt(curDay,+rm.dataset.removeIdx);
+    return;
+  }
   var c=e.target.closest(".stop-card[data-idx]");if(!c)return;
   openStopModal(curDay,+c.dataset.idx);
 });
@@ -88,6 +98,12 @@ $("#planTimeline").addEventListener("keydown",function(e){
   e.preventDefault();openStopModal(curDay,+c.dataset.idx);
 });
 $("#backlogTimeline").addEventListener("click",function(e){
+  var rm=e.target.closest("[data-remove-idx]");
+  if(rm){
+    var s=colArr(0)[+rm.dataset.removeIdx];
+    if(s&&confirm('ลบ "'+s.title+'" ออกจากไอเดีย?'))deleteStopAt(0,+rm.dataset.removeIdx);
+    return;
+  }
   var c=e.target.closest(".stop-card[data-idx]");if(!c)return;
   openStopModal(0,+c.dataset.idx);
 });
@@ -134,6 +150,7 @@ function closeStopModal(){
 $("#stopModal").addEventListener("click",function(e){
   if(!e.target.closest(".picker-panel"))closeStopModal();
 });
+$("#stopModalClose").addEventListener("click",closeStopModal);
 $("#stopSaveBtn").addEventListener("click",function(){
   var place=$("#stopPlace").value.trim();
   if(!place){$("#stopPlace").focus();return}
@@ -151,18 +168,23 @@ $("#stopSaveBtn").addEventListener("click",function(){
   renderBoard();renderDay(curDay);renderDayStrip();renderBacklogTimeline();
   closeStopModal();
 });
-$("#stopDeleteBtn").addEventListener("click",function(){
-  var arr=colArr(stopEditCtx.ci);
-  arr.splice(stopEditCtx.idx,1);
-  docList(activeTrip.id,stopEditCtx.pendingStopId).then(function(list){
+// ใช้ร่วมกันทั้งปุ่มลบใน modal เต็ม และปุ่ม ✕ ลบเร็วบนตัวการ์ดเอง (เพิ่ม 2026-08-13)
+function deleteStopAt(ci,idx){
+  var arr=colArr(ci);
+  var s=arr[idx];
+  if(!s)return;
+  arr.splice(idx,1);
+  docList(activeTrip.id,s.id).then(function(list){
     list.forEach(function(f){docDelete(f.id)});
   });
-  stopEditCtx.saved=true; // จุดหมายถูกลบแล้ว ไม่ต้องให้ closeStopModal() เคลียร์ไฟล์ซ้ำ
   persistCurrentTrip();
   renderBoard();renderDay(curDay);renderDayStrip();renderBacklogTimeline();
+}
+$("#stopDeleteBtn").addEventListener("click",function(){
+  deleteStopAt(stopEditCtx.ci,stopEditCtx.idx);
+  stopEditCtx.saved=true; // จุดหมายถูกลบแล้ว ไม่ต้องให้ closeStopModal() เคลียร์ไฟล์ซ้ำ
   closeStopModal();
 });
-
 /* ---- เอกสารแนบระดับจุดหมาย (ในตัว stopModal) ---- */
 function renderStopDocs(){
   var box=$("#stopDocList");

@@ -435,8 +435,16 @@
     padding:13px 15px;display:flex;gap:12px;align-items:flex-start;
   }
   /* คลิกแก้ไขได้เฉพาะการ์ดในโต๊ะวางแผน (ci-based, ดู stopCardHTML) — แผนเที่ยวรายวันยังเป็น .stop-card เฉยๆ ไม่มี hover/cursor */
-  .stop-card-editable{cursor:pointer;transition:border-color .2s,transform .2s}
+  .stop-card-editable{cursor:pointer;transition:border-color .2s,transform .2s;position:relative;padding-right:38px}
   .stop-card-editable:hover{border-color:rgba(245,158,11,.4);transform:translateX(3px)}
+  /* ปุ่มลบเร็วมุมขวาบน — ไม่ต้องเปิด modal เต็มก่อนลบ (เพิ่ม 2026-08-13) */
+  .stop-remove{
+    position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:99px;
+    border:1px solid var(--border);background:var(--panel-2,rgba(255,255,255,.04));color:var(--muted);
+    display:flex;align-items:center;justify-content:center;font-size:.68rem;line-height:1;cursor:pointer;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .stop-remove:hover{background:#f87171;border-color:#f87171;color:#fff}
   .doc-attach{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
   .doc-attach-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
   .doc-attach-head .label{font-size:.8rem;font-weight:700}
@@ -448,7 +456,7 @@
   .doc-item .doc-del{flex:none;background:none;border:none;color:#f87171;cursor:pointer;font-size:.9rem;padding:2px 4px}
   .stop-time{flex:none;font-weight:700;color:var(--gold-2);font-size:.85rem;min-width:48px}
   .stop-body h4{margin:0 0 3px;font-size:.93rem}
-  .stop-body p{margin:0;font-size:.77rem;color:var(--muted);line-height:1.55}
+  .stop-body p{margin:0;font-size:.83rem;color:var(--muted);line-height:1.6}
   .tag{
     display:inline-block;margin-top:8px;margin-right:6px;
     font-size:.66rem;font-weight:600;padding:3px 9px;border-radius:99px;
@@ -713,6 +721,14 @@
     border:1px solid var(--border);border-radius:var(--radius);padding:18px;
     display:flex;flex-direction:column;gap:8px;box-shadow:0 24px 60px rgba(0,0,0,.5);
   }
+  /* ปุ่มปิด X มุมขวาบน — เสริมจากการกดพื้นที่ว่างนอกกล่องปิดได้อยู่แล้ว (สื่อความหมายชัดกว่า) */
+  .picker-close{
+    position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:99px;flex:none;
+    border:1px solid var(--border);background:var(--panel-2,rgba(255,255,255,.04));color:var(--muted);
+    display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;
+    transition:background .15s,color .15s,border-color .15s;
+  }
+  .picker-close:hover{background:#f87171;border-color:#f87171;color:#fff}
   .picker-panel h3{margin:0;font-size:.98rem}
   .picker-panel .sub2{font-size:.73rem;color:var(--muted);margin-bottom:4px}
   #discoveryList{
@@ -930,6 +946,7 @@
     width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;
     border:1px solid var(--border);background:var(--panel-2);color:var(--text);font:inherit;
   }
+  .trip-form-row textarea.tf-text{resize:vertical;min-height:64px;line-height:1.5}
   .trip-form-row input:focus{outline:none;border-color:rgba(245,158,11,.55)}
   /* ปฏิทิน/สปินเนอร์ของ input date ใน Chrome เป็นไอคอนดำ มองไม่เห็นบนพื้นมืด */
   .trip-form-row input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(.7)}
@@ -1801,7 +1818,8 @@
   </div>
 
   <div class="picker" id="stopModal" role="dialog" aria-label="เพิ่ม/แก้ไขจุดหมาย">
-    <div class="picker-panel" style="width:min(480px,100%)">
+    <div class="picker-panel" style="width:min(480px,100%);position:relative">
+      <button type="button" class="picker-close" id="stopModalClose" aria-label="ปิด" title="ปิด">✕</button>
       <h3 id="stopModalTitle">➕ เพิ่มจุดหมาย</h3>
       <div class="sub2">แก้แผนวันนี้ได้เลย — บันทึกไว้ในเครื่องนี้ทันที</div>
       <div class="modal-card">
@@ -1828,7 +1846,7 @@
         </div>
         <div class="trip-form-row">
           <label style="flex-basis:100%">รายละเอียด
-            <input type="text" id="stopDesc" class="tf-text" placeholder="เช่น เต้าหู้เหม็นดำฮั่วกงเตี้ยน">
+            <textarea id="stopDesc" class="tf-text" rows="3" placeholder="เช่น เต้าหู้เหม็นดำฮั่วกงเตี้ยน"></textarea>
           </label>
         </div>
         <div class="trip-form-row">
